@@ -535,14 +535,35 @@ def run_prompt():
     try:
         data   = request.get_json()
         prompt = data.get("prompt","")
+
         def generate():
-            with client.messages.stream(model="claude-sonnet-4-6", max_tokens=2000,
-                    messages=[{"role":"user","content":prompt}]) as stream:
+            import time
+            last_heartbeat = time.time()
+
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=4000,
+                messages=[{"role":"user","content":prompt}]
+            ) as stream:
                 for text in stream.text_stream:
                     yield f"data: {json.dumps({'text': text})}\n\n"
+                    # Send heartbeat every 10s to keep connection alive
+                    now = time.time()
+                    if now - last_heartbeat > 10:
+                        yield "data: {"heartbeat": true}\n\n"
+                        last_heartbeat = now
             yield "data: [DONE]\n\n"
-        return Response(stream_with_context(generate()), mimetype="text/event-stream",
-            headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+                "Transfer-Encoding": "chunked",
+            }
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
