@@ -5,6 +5,7 @@ import secrets
 import psycopg
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, session, redirect, url_for
 from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized
 from werkzeug.middleware.proxy_fix import ProxyFix
 import anthropic
 
@@ -291,23 +292,26 @@ def run_task_async(task_id, fn, *args):
 def auth_google():
     return redirect(url_for("google.login"))
 
-@app.route("/login/google/authorized")
-def auth_google_callback():
-    if not google.authorized:
-        return redirect("/")
+@oauth_authorized.connect_via(google_bp)
+def google_logged_in(blueprint, token):
+    if not token:
+        return False
     try:
-        resp = google.get("/oauth2/v2/userinfo")
+        resp = blueprint.session.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            return False
         info = resp.json()
         user_id = upsert_user(
             google_id=info["id"],
             email=info["email"],
-            name=info.get("name",""),
-            avatar=info.get("picture",""),
+            name=info.get("name", ""),
+            avatar=info.get("picture", ""),
         )
         session["user_id"] = user_id
+        session.modified = True
     except Exception as e:
-        print(f"Auth callback error: {e}")
-    return redirect("/")
+        print(f"Auth signal error: {e}")
+    return False  # Don't save OAuth token to DB, we handle our own session
 
 @app.route("/auth/logout")
 def auth_logout():
