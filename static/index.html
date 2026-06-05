@@ -260,6 +260,19 @@
       <div class="goal-recap"><span>Goal: </span><span id="goal-display"></span></div>
       <div class="save-indicator" id="save-indicator">AUTOSAVE ON</div>
       <div id="messages"></div>
+      <!-- CHECKPOINT CARD -->
+      <div id="checkpoint-card" style="display:none; flex-direction:column; gap:12px; border:1px solid #f59e0b; background:#0d0d16; padding:20px; animation: fadeIn 0.4s ease;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+          <span style="font-size:11px;color:#f59e0b;letter-spacing:0.15em;">CHECKPOINT DRAFT</span>
+          <span id="checkpoint-summary" style="font-size:11px;color:#5a5a6e;margin-left:4px;"></span>
+        </div>
+        <div id="checkpoint-text" style="font-size:13px;line-height:1.8;color:#c8c4b9;white-space:pre-wrap;word-break:break-word;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary" id="checkpoint-use-btn">✓ Use This Prompt</button>
+          <button class="btn-secondary" id="checkpoint-continue-btn">→ Keep Improving</button>
+        </div>
+      </div>
       <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
 
       <!-- FINAL PROMPT -->
@@ -328,6 +341,12 @@
 
     let apiHistory = [];
     let currentGoal = "";
+    let promptId = "";
+    let questionCount = 0;
+
+    function generateId() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
 
     // ── AUTOSAVE ──────────────────────────────────────────────
     function saveSession(extra = {}) {
@@ -441,6 +460,7 @@
       resetBtn.style.display = "block";
       goalDisplay.textContent = currentGoal;
 
+      promptId = generateId();
       const firstMsg = { role: "user", content: `I want to create a prompt that helps me: ${currentGoal}` };
       apiHistory = [firstMsg];
 
@@ -453,7 +473,7 @@
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiHistory }),
+          body: JSON.stringify({ messages: apiHistory, promptId, questionCount }),
         });
         const data = await res.json();
         if (data.error) { addBubble("ai", "Something went wrong. Please try again."); return; }
@@ -484,8 +504,17 @@
       saveSession({ lastStage: result.stage, lastResult: result });
 
       if (result.stage === "final" && result.finalPrompt) {
-        showFinal(result.finalPrompt, result.optimizerChanges || []);
+        showFinal(result.finalPrompt, []);
+        if (result.optimizing && result.optimizerId) {
+          showOptimizerRunning();
+          pollForTask(result.optimizerId, "optimizer", result.finalPrompt);
+        }
       } else {
+        if (result.question) questionCount++;
+        // Trigger checkpoint poll if backend started one
+        if (result.checkpointId) {
+          pollForTask(result.checkpointId, "checkpoint", null);
+        }
         showInputArea(result);
       }
 
@@ -750,6 +779,120 @@
     runBtn.addEventListener("click", executeRun);
     retryBtn.addEventListener("click", executeRun);
 
+    // ── BACKGROUND TASK POLLING ──────────────────────────────
+    const checkpointCard = document.getElementById("checkpoint-card");
+    const checkpointText = document.getElementById("checkpoint-text");
+    const checkpointSummary = document.getElementById("checkpoint-summary");
+    const checkpointUseBtn = document.getElementById("checkpoint-use-btn");
+    const checkpointContBtn = document.getElementById("checkpoint-continue-btn");
+
+    function showOptimizerRunning() {
+      optimizerWrap.style.display = "block";
+      optimizerChanges.innerHTML = "";
+      const indicator = document.createElement("div");
+      indicator.style.cssText = "font-size:12px;color:#8b5cf6;display:flex;align-items:center;gap:8px;";
+      indicator.innerHTML = '<div class="dot" style="width:5px;height:5px;background:#8b5cf6;animation:pulse 1.2s infinite;"></div><div class="dot" style="width:5px;height:5px;background:#8b5cf6;animation:pulse 1.2s 0.2s infinite;"></div><div class="dot" style="width:5px;height:5px;background:#8b5cf6;animation:pulse 1.2s 0.4s infinite;"></div><span style="margin-left:4px;">Optimizing prompt...</span>';
+      optimizerChanges.appendChild(indicator);
+    }
+
+    async function pollForTask(taskId, type, originalData) {
+      const maxAttempts = 30;
+      let attempts = 0;
+
+      const interval = setInterval(async () => {
+        attempts++;
+        try {
+          const res = await fetch(`/api/task-result?taskId=${taskId}`);
+          const data = await res.json();
+
+          if (data.ready) {
+            clearInterval(interval);
+
+            if (type === "checkpoint") {
+              const cp = data.result;
+              if (cp && cp.checkpointPrompt) {
+                checkpointText.textContent = cp.checkpointPrompt;
+                checkpointSummary.textContent = cp.summary ? "— " + cp.summary : "";
+                checkpointCard.style.display = "flex";
+                checkpointCard.style.flexDirection = "column";
+                scrollBottom();
+              }
+            }
+
+            if (type === "optimizer") {
+              const r = data.result;
+              if (r && r.improved && r.improved !== originalData) {
+                finalPrompt.textContent = r.improved;
+              }
+              optimizerChanges.innerHTML = "";
+              if (r && r.changes && r.changes.length > 0) {
+                r.changes.forEach(change => {
+                  const item = document.createElement("div");
+                  item.style.cssText = "font-size:12px;color:#a78bfa;padding:6px 10px;background:rgba(139,92,246,0.08);border-left:2px solid #8b5cf6;";
+                  item.textContent = "✦ " + change;
+                  optimizerChanges.appendChild(item);
+                });
+              } else {
+                optimizerWrap.style.display = "none";
+              }
+              saveSession({ lastStage: "final", lastResult: { stage: "final", finalPrompt: finalPrompt.textContent, optimizerChanges: r?.changes || [], progress: 100 }});
+            }
+          }
+
+          if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            if (type === "optimizer") {
+              optimizerChanges.innerHTML = "";
+              optimizerWrap.style.display = "none";
+            }
+          }
+        } catch { /* silently ignore */ }
+      }, 2000);
+    }
+
+    // Checkpoint buttons
+    checkpointUseBtn.addEventListener("click", () => {
+      const prompt = checkpointText.textContent;
+      checkpointCard.style.display = "none";
+      inputArea.style.display = "none";
+      // Show as final prompt and run optimizer
+      showFinal(prompt, []);
+      showOptimizerRunning();
+      const optId = generateId() + "_opt";
+      const t = fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...apiHistory, { role: "user", content: "Please finalize and polish this prompt: " + prompt }],
+          promptId: optId,
+          questionCount: 0,
+        })
+      });
+      // Just run optimizer directly in background via task endpoint isn't available client-side
+      // So we poll for optimizer on the checkpoint text itself
+      const localOptId = generateId();
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Finalize this prompt — set stage to final immediately with this as finalPrompt: " + prompt }],
+          promptId: localOptId,
+          questionCount: 0,
+        })
+      }).then(r => r.json()).then(result => {
+        if (result.optimizerId) {
+          pollForTask(result.optimizerId, "optimizer", prompt);
+        }
+      }).catch(() => {});
+      scrollBottom();
+    });
+
+    checkpointContBtn.addEventListener("click", () => {
+      checkpointCard.style.display = "none";
+      scrollBottom();
+    });
+    // ─────────────────────────────────────────────────────────
+
     [resetBtn, resetBtn2].forEach(btn => btn.addEventListener("click", resetSession));
 
     function resetSession() {
@@ -774,6 +917,9 @@
       runErrorMsg.style.display = "none";
       optimizerWrap.style.display = "none";
       optimizerChanges.innerHTML = "";
+      checkpointCard.style.display = "none";
+      checkpointText.textContent = "";
+      questionCount = 0;
       document.getElementById("resume-banner").style.display = "none";
     }
 

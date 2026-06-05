@@ -1,5 +1,6 @@
 import os
 import json
+import threading
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 import anthropic
 
@@ -39,6 +40,22 @@ Rules:
 - Never produce JSON with syntax errors"""
 
 
+CHECKPOINT_PROMPT = """You are PromptForge, a prompt engineering assistant. Based on the conversation so far, generate a draft prompt that captures everything learned up to this point.
+
+This is a CHECKPOINT — not the final prompt. It should:
+- Reflect all context and answers gathered so far
+- Be well-structured and already usable
+- Be clearly labeled as a work-in-progress that can be improved further
+
+Respond ONLY with a JSON object:
+{
+  "checkpointPrompt": "the draft prompt text based on conversation so far",
+  "summary": "one sentence describing what this draft captures"
+}
+
+No preamble, no explanation outside the JSON."""
+
+
 OPTIMIZER_PROMPT = """You are an expert prompt analyst and rewriter. Your job is to silently improve a prompt by identifying and fixing any gaps before it reaches the user.
 
 Analyze the given prompt for these gap categories:
@@ -63,8 +80,28 @@ Respond ONLY with a JSON object in this exact shape:
 No preamble, no explanation outside the JSON."""
 
 
+def build_checkpoint(messages: list) -> dict:
+    """Generate a checkpoint draft prompt from the conversation so far."""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            system=CHECKPOINT_PROMPT,
+            messages=messages,
+        )
+        text = response.content[0].text
+        clean = text.replace("```json", "").replace("```", "").strip()
+        start = clean.find("{")
+        end = clean.rfind("}") + 1
+        if start != -1 and end > start:
+            clean = clean[start:end]
+        return json.loads(clean)
+    except Exception:
+        return {}
+
+
 def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
-    """Run the completeness optimizer on a draft prompt. Returns (improved_prompt, changes)."""
+    """Run the completeness optimizer on a draft prompt."""
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
@@ -75,34 +112,18 @@ def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
             ],
         )
         text = response.content[0].text
-
-        # Try to extract JSON even if there's extra text around it
-        clean = text.strip()
-
-        # Strip markdown fences
-        clean = clean.replace("```json", "").replace("```", "").strip()
-
-        # If there's extra text before/after the JSON object, extract just the JSON
+        clean = text.replace("```json", "").replace("```", "").strip()
         start = clean.find("{")
         end = clean.rfind("}") + 1
         if start != -1 and end > start:
             clean = clean[start:end]
-
         result = json.loads(clean)
         improved = result.get("improved", "").strip()
         changes = result.get("changes", [])
-
-        # Only use improved version if it's non-empty and reasonably sized
         if improved and len(improved) > len(raw_prompt) * 0.5:
             return improved, changes
-        else:
-            return raw_prompt, []
-
-    except json.JSONDecodeError:
-        # JSON parse failed — return original silently
         return raw_prompt, []
     except Exception:
-        # Any other failure — return original silently
         return raw_prompt, []
 
 
@@ -111,11 +132,25 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+# Shared cache for background tasks
+task_cache = {}
+task_lock = threading.Lock()
+
+
+def run_task_async(task_id: str, fn, *args):
+    """Run any function in background and cache result."""
+    result = fn(*args)
+    with task_lock:
+        task_cache[task_id] = result
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
         data = request.get_json()
         messages = data.get("messages", [])
+        prompt_id = data.get("promptId", "")
+        question_count = data.get("questionCount", 0)
 
         response = client.messages.create(
             model="claude-sonnet-4-6",
@@ -128,11 +163,31 @@ def chat():
         clean = text.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(clean)
 
-        # If this is the final prompt, run it through the optimizer
-        if parsed.get("stage") == "final" and parsed.get("finalPrompt"):
-            improved, changes = optimize_prompt(parsed["finalPrompt"])
-            parsed["finalPrompt"] = improved
-            parsed["optimizerChanges"] = changes
+        # Every 2 questions — trigger a background checkpoint
+        if (parsed.get("stage") != "final" and
+                question_count > 0 and
+                question_count % 2 == 0 and
+                prompt_id):
+            checkpoint_id = f"{prompt_id}_cp_{question_count}"
+            t = threading.Thread(
+                target=run_task_async,
+                args=(checkpoint_id, build_checkpoint, messages),
+                daemon=True,
+            )
+            t.start()
+            parsed["checkpointId"] = checkpoint_id
+
+        # Final prompt — run optimizer in background
+        if parsed.get("stage") == "final" and parsed.get("finalPrompt") and prompt_id:
+            parsed["optimizing"] = True
+            optimizer_id = f"{prompt_id}_opt"
+            t = threading.Thread(
+                target=run_task_async,
+                args=(optimizer_id, lambda p: {"improved": optimize_prompt(p)[0], "changes": optimize_prompt(p)[1]}, parsed["finalPrompt"]),
+                daemon=True,
+            )
+            t.start()
+            parsed["optimizerId"] = optimizer_id
 
         return jsonify(parsed)
 
@@ -140,6 +195,17 @@ def chat():
         return jsonify({"error": "Failed to parse AI response"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/task-result", methods=["GET"])
+def task_result():
+    """Poll for any background task result."""
+    task_id = request.args.get("taskId", "")
+    with task_lock:
+        result = task_cache.pop(task_id, None)
+    if result:
+        return jsonify({"ready": True, "result": result})
+    return jsonify({"ready": False})
 
 
 @app.route("/api/run", methods=["POST"])
