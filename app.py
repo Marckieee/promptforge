@@ -492,8 +492,13 @@ def chat():
         prefs  = get_prefs(session_id)
         system = build_system_prompt(prefs)
 
-        response = client.messages.create(model="claude-sonnet-4-6", max_tokens=1000, system=system, messages=messages)
+        response = client.messages.create(model="claude-sonnet-4-6", max_tokens=2000, system=system, messages=messages)
         text  = response.content[0].text.replace("```json","").replace("```","").strip()
+        # Extract JSON robustly in case of extra text
+        start = text.find("{")
+        end   = text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
         parsed = json.loads(text)
 
         if parsed.get("stage") != "final" and question_count > 0 and question_count % 2 == 0 and prompt_id:
