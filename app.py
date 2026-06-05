@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 import anthropic
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +61,35 @@ def chat():
 
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to parse AI response"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/run", methods=["POST"])
+def run_prompt():
+    try:
+        data = request.get_json()
+        prompt = data.get("prompt", "")
+
+        def generate():
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            }
+        )
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

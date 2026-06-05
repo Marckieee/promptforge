@@ -261,10 +261,24 @@
         </div>
         <div class="final-box" id="final-prompt-text"></div>
         <div class="final-actions">
+          <button class="btn-primary" id="run-btn">▶ Run Prompt</button>
           <button class="btn-primary" id="copy-btn">Copy Prompt</button>
-          <button class="btn-primary" id="chatgpt-btn" style="background:#10a37f;">⚡ Open in ChatGPT</button>
           <button class="btn-secondary" id="reset-btn-2">Start Over</button>
         </div>
+
+      <!-- RUN RESULT PANEL -->
+      <div id="run-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:8px; animation: fadeIn 0.4s ease;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
+          <span style="font-size:11px;color:#3b82f6;letter-spacing:0.15em;">AI RESPONSE</span>
+          <div id="run-loading" style="display:none; margin-left:8px; gap:4px; align-items:center;">
+            <div class="dot" style="width:5px;height:5px;"></div>
+            <div class="dot" style="width:5px;height:5px;animation-delay:0.2s;"></div>
+            <div class="dot" style="width:5px;height:5px;animation-delay:0.4s;"></div>
+          </div>
+        </div>
+        <div id="run-result" style="background:#0d0d16;border:1px solid #3b82f6;padding:24px;font-size:13px;line-height:1.8;color:#c8d8f0;white-space:pre-wrap;word-break:break-word;min-height:60px;"></div>
+      </div>
       </div>
 
       <!-- QUESTION + INPUT -->
@@ -438,7 +452,10 @@
       await callAI();
     }
 
-    const chatgptBtn = document.getElementById("chatgpt-btn");
+    const runBtn      = document.getElementById("run-btn");
+    const runWrap     = document.getElementById("run-wrap");
+    const runResult   = document.getElementById("run-result");
+    const runLoading  = document.getElementById("run-loading");
 
     copyBtn.addEventListener("click", () => {
       navigator.clipboard.writeText(finalPrompt.textContent);
@@ -447,10 +464,52 @@
       setTimeout(() => { copyBtn.textContent = "Copy Prompt"; copyBtn.style.background = ""; }, 2000);
     });
 
-    chatgptBtn.addEventListener("click", () => {
+    runBtn.addEventListener("click", async () => {
       const prompt = finalPrompt.textContent;
-      const url = "https://chatgpt.com/?q=" + encodeURIComponent(prompt);
-      window.open(url, "_blank");
+      runWrap.style.display = "flex";
+      runWrap.style.flexDirection = "column";
+      runResult.textContent = "";
+      runLoading.style.display = "flex";
+      runBtn.disabled = true;
+      runBtn.textContent = "Running...";
+      scrollBottom();
+
+      try {
+        const response = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        runLoading.style.display = "none";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(data);
+                runResult.textContent += parsed.text;
+                scrollBottom();
+              } catch {}
+            }
+          }
+        }
+      } catch (e) {
+        runResult.textContent = "Error running prompt. Please try again.";
+      } finally {
+        runBtn.disabled = false;
+        runBtn.textContent = "▶ Run Again";
+        runLoading.style.display = "none";
+        scrollBottom();
+      }
     });
 
     [resetBtn, resetBtn2].forEach(btn => btn.addEventListener("click", resetSession));
@@ -469,6 +528,9 @@
       stageBar.style.display = "none";
       resetBtn.style.display = "none";
       progressFill.style.width = "0%";
+      runWrap.style.display = "none";
+      runResult.textContent = "";
+      runBtn.textContent = "▶ Run Prompt";
     }
 
     function addBubble(type, text, stage) {
