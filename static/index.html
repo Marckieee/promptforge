@@ -1497,17 +1497,49 @@
           const card = document.createElement("div");
           card.style.cssText = "background:#111118;border:1px solid #1a1a25;padding:14px;display:flex;flex-direction:column;gap:8px;";
           const date = new Date(p.created_at).toLocaleDateString("en-SG",{day:"numeric",month:"short"});
-          card.innerHTML = `
-            <div style="font-size:11px;color:#3a3a50;display:flex;justify-content:space-between;">
-              <span>${p.saved_by || "Unknown"} · ${date}</span>
-              <button onclick="deleteTeamPrompt(${teamId},${p.id})" style="background:none;border:none;color:#3a3a50;cursor:pointer;font-size:11px;padding:0;">✕</button>
-            </div>
-            <div style="font-size:12px;color:#f59e0b;">${(p.goal||"").slice(0,70)}${(p.goal||"").length>70?"...":""}</div>
-            <div style="font-size:11px;color:#5a5a6e;line-height:1.6;">${p.prompt.slice(0,100)}...</div>
-            <div style="display:flex;gap:8px;">
-              <button class="option-pill" style="font-size:11px;" onclick="navigator.clipboard.writeText(${JSON.stringify(p.prompt)});this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',1500);">Copy</button>
-              <button class="option-pill" style="font-size:11px;" onclick="useLibraryPrompt(${JSON.stringify(p.prompt)});">Use →</button>
-            </div>`;
+
+          const dateRow = document.createElement("div");
+          dateRow.style.cssText = "font-size:11px;color:#3a3a50;display:flex;justify-content:space-between;";
+          dateRow.innerHTML = `<span>${p.saved_by || "Unknown"} · ${date}</span>`;
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "✕";
+          delBtn.style.cssText = "background:none;border:none;color:#3a3a50;cursor:pointer;font-size:11px;padding:0;";
+          delBtn.addEventListener("click", () => deleteTeamPrompt(teamId, p.id));
+          dateRow.appendChild(delBtn);
+
+          const goalDiv = document.createElement("div");
+          goalDiv.style.cssText = "font-size:12px;color:#f59e0b;font-weight:500;";
+          goalDiv.textContent = (p.goal||"").slice(0,70) + ((p.goal||"").length>70?"...":"");
+
+          const previewDiv = document.createElement("div");
+          previewDiv.style.cssText = "font-size:11px;color:#5a5a6e;line-height:1.6;";
+          previewDiv.textContent = p.prompt.slice(0,100) + "...";
+
+          const btnRow = document.createElement("div");
+          btnRow.style.cssText = "display:flex;gap:8px;";
+
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "option-pill";
+          copyBtn.style.fontSize = "11px";
+          copyBtn.textContent = "Copy";
+          copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(p.prompt);
+            copyBtn.textContent = "✓ Copied!";
+            setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+          });
+
+          const useBtn = document.createElement("button");
+          useBtn.className = "option-pill";
+          useBtn.style.fontSize = "11px";
+          useBtn.textContent = "Use →";
+          useBtn.addEventListener("click", () => useLibraryPrompt(p.prompt));
+
+          btnRow.appendChild(copyBtn);
+          btnRow.appendChild(useBtn);
+          card.appendChild(dateRow);
+          card.appendChild(goalDiv);
+          card.appendChild(previewDiv);
+          card.appendChild(btnRow);
           list.appendChild(card);
         });
       } catch {
