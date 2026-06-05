@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PromptForge</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #0d0d16;
+      --border: #1a1a25;
+      --border2: #2a2a35;
+      --amber: #f59e0b;
+      --amber-light: #fbbf24;
+      --green: #10b981;
+      --text: #e8e4d9;
+      --text-muted: #a09888;
+      --text-dim: #5a5a6e;
+      --text-dark: #3a3a50;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    /* HEADER */
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .logo { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; }
+    .logo span:first-child { color: var(--amber); text-shadow: 0 0 40px rgba(245,158,11,0.4); }
+    .logo span:last-child { color: var(--border2); }
+    .logo-sub { font-size: 10px; color: var(--text-dark); letter-spacing: 0.2em; margin-top: 2px; }
+
+    /* PROGRESS */
+    #progress-bar { height: 2px; background: var(--border); display: none; }
+    #progress-fill { height: 100%; background: linear-gradient(90deg, var(--amber), var(--amber-light)); transition: width 0.8s ease; box-shadow: 0 0 8px rgba(245,158,11,0.6); width: 0%; }
+
+    /* STAGE INDICATOR */
+    #stage-bar { padding: 8px 32px; background: var(--surface2); border-bottom: 1px solid var(--border); display: none; align-items: center; gap: 8px; font-size: 11px; }
+    #stage-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+    #stage-label { color: var(--text-dark); letter-spacing: 0.15em; }
+    #stage-progress { margin-left: auto; color: var(--text-dark); }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* LANDING */
+    #landing { display: flex; flex-direction: column; gap: 32px; padding-top: 40px; animation: fadeIn 0.4s ease; }
+    h1 { font-family: 'Playfair Display', serif; font-size: clamp(30px, 6vw, 50px); font-weight: 900; line-height: 1.1; letter-spacing: -0.03em; }
+    h1 .accent { color: var(--amber); }
+    .subtitle { color: var(--text-dim); font-size: 14px; line-height: 1.7; max-width: 480px; margin-top: 12px; }
+
+    .input-label { font-size: 11px; letter-spacing: 0.2em; color: var(--text-dark); margin-bottom: 8px; }
+    textarea, input[type=text] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      padding: 14px 16px;
+      outline: none;
+      resize: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus, input[type=text]:focus { border-color: var(--amber); }
+
+    .hint { font-size: 11px; color: var(--border2); margin-top: 6px; }
+
+    .features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .feature { padding: 16px; border: 1px solid var(--border); background: var(--surface2); }
+    .feature-icon { font-size: 18px; margin-bottom: 6px; }
+    .feature-title { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 4px; letter-spacing: 0.05em; }
+    .feature-desc { font-size: 11px; color: var(--text-dark); line-height: 1.5; }
+
+    /* BUTTONS */
+    .btn-primary {
+      background: var(--amber);
+      color: var(--bg);
+      border: none;
+      padding: 14px 32px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    .btn-primary:hover { background: var(--amber-light); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text-muted);
+      padding: 10px 20px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+    .btn-secondary:hover { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
+
+    /* CHAT */
+    #chat { display: none; flex-direction: column; gap: 16px; }
+
+    .goal-recap { padding: 12px 16px; background: var(--surface2); border-left: 2px solid var(--border2); font-size: 12px; color: var(--text-dark); }
+    .goal-recap span { color: var(--amber); }
+
+    .bubble-ai { background: var(--surface); border-left: 2px solid var(--amber); padding: 14px 18px; font-size: 14px; line-height: 1.7; color: #c8c4b9; animation: fadeIn 0.3s ease; }
+    .bubble-user { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15); padding: 12px 18px; font-size: 13px; color: var(--text-muted); align-self: flex-end; max-width: 80%; animation: fadeIn 0.3s ease; }
+
+    /* STAGE COLORS */
+    .stage-clarify { border-left-color: #3b82f6; }
+    .stage-refine { border-left-color: #8b5cf6; }
+    .stage-final { border-left-color: var(--green); }
+
+    /* LOADING */
+    #loading { display: none; align-items: center; gap: 8px; padding: 16px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); animation: pulse 1.2s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    .loading-text { margin-left: 8px; font-size: 11px; color: var(--text-dark); letter-spacing: 0.1em; }
+
+    /* OPTIONS */
+    #options-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+    .option-pill {
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .option-pill:hover { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
+
+    /* INPUT AREA */
+    #input-area { display: none; flex-direction: column; gap: 8px; }
+    #question-text { font-size: 13px; color: var(--amber); letter-spacing: 0.05em; margin-bottom: 4px; }
+    .input-row { display: flex; gap: 8px; }
+    .input-row textarea { flex: 1; }
+    .send-btn { padding: 14px 20px; font-size: 16px; }
+
+    /* FINAL */
+    #final-wrap { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.4s ease; }
+    .final-label { display: flex; align-items: center; gap: 8px; }
+    .final-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .final-label-text { font-size: 11px; color: var(--green); letter-spacing: 0.15em; }
+    .final-box {
+      background: var(--surface2);
+      border: 1px solid var(--green);
+      padding: 24px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #d4f1e7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .final-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="logo"><span>PROMPT</span><span>FORGE</span></div>
+      <div class="logo-sub">AI-POWERED PROMPT ENGINEERING</div>
+    </div>
+    <button class="btn-secondary" id="reset-btn" style="display:none">↩ NEW SESSION</button>
+  </header>
+
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="stage-bar">
+    <div id="stage-dot"></div>
+    <span id="stage-label"></span>
+    <span id="stage-progress"></span>
+  </div>
+
+  <main>
+
+    <!-- LANDING -->
+    <div id="landing">
+      <div>
+        <h1>Turn vague ideas<br><span class="accent">into perfect prompts.</span></h1>
+        <p class="subtitle">Describe what you're trying to accomplish. PromptForge will guide you through focused stages to craft a prompt that actually works.</p>
+      </div>
+
+      <div>
+        <div class="input-label">WHAT DO YOU WANT TO ACHIEVE?</div>
+        <textarea id="goal-input" rows="4" placeholder="e.g. Write a LinkedIn post about my new product launch that doesn't feel salesy..."></textarea>
+        <div class="hint">Press the button below to start</div>
+      </div>
+
+      <button class="btn-primary" id="start-btn" disabled>Start Forging →</button>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Adaptive Flow</div>
+          <div class="feature-desc">AI picks the right approach for your goal</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-title">Staged Clarity</div>
+          <div class="feature-desc">One focused question at a time</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">✦</div>
+          <div class="feature-title">Pro Output</div>
+          <div class="feature-desc">Production-ready prompts, every time</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="chat">
+      <div class="goal-recap"><span>Goal: </span><span id="goal-display"></span></div>
+      <div id="messages"></div>
+      <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
+
+      <!-- FINAL PROMPT -->
+      <div id="final-wrap">
+        <div class="final-label">
+          <div class="final-dot"></div>
+          <span class="final-label-text">YOUR FORGED PROMPT</span>
+        </div>
+        <div class="final-box" id="final-prompt-text"></div>
+        <div class="final-actions">
+          <button class="btn-primary" id="copy-btn">Copy Prompt</button>
+          <button class="btn-secondary" id="reset-btn-2">Start Over</button>
+        </div>
+      </div>
+
+      <!-- QUESTION + INPUT -->
+      <div id="input-area">
+        <div id="question-text"></div>
+        <div id="options-wrap"></div>
+        <div class="input-row">
+          <textarea id="answer-input" rows="2" placeholder="Type your answer..."></textarea>
+          <button class="btn-primary send-btn" id="send-btn">→</button>
+        </div>
+        <div class="hint">Enter to send · Shift+Enter for new line</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const STAGES = {
+      intake:  { label: "UNDERSTANDING GOAL", color: "#f59e0b" },
+      clarify: { label: "CLARIFYING DETAILS",  color: "#3b82f6" },
+      refine:  { label: "REFINING",             color: "#8b5cf6" },
+      final:   { label: "COMPLETE!",            color: "#10b981" },
+    };
+
+    let apiHistory = [];
+    let currentGoal = "";
+
+    // Elements
+    const goalInput    = document.getElementById("goal-input");
+    const startBtn     = document.getElementById("start-btn");
+    const landing      = document.getElementById("landing");
+    const chat         = document.getElementById("chat");
+    const messages     = document.getElementById("messages");
+    const loading      = document.getElementById("loading");
+    const inputArea    = document.getElementById("input-area");
+    const questionText = document.getElementById("question-text");
+    const optionsWrap  = document.getElementById("options-wrap");
+    const answerInput  = document.getElementById("answer-input");
+    const sendBtn      = document.getElementById("send-btn");
+    const finalWrap    = document.getElementById("final-wrap");
+    const finalPrompt  = document.getElementById("final-prompt-text");
+    const copyBtn      = document.getElementById("copy-btn");
+    const progressBar  = document.getElementById("progress-bar");
+    const progressFill = document.getElementById("progress-fill");
+    const stageBar     = document.getElementById("stage-bar");
+    const stageDot     = document.getElementById("stage-dot");
+    const stageLabel   = document.getElementById("stage-label");
+    const stageProgress= document.getElementById("stage-progress");
+    const resetBtn     = document.getElementById("reset-btn");
+    const resetBtn2    = document.getElementById("reset-btn-2");
+    const goalDisplay  = document.getElementById("goal-display");
+
+    // Enable start button when there's input
+    goalInput.addEventListener("input", () => {
+      startBtn.disabled = !goalInput.value.trim();
+    });
+
+    startBtn.addEventListener("click", startSession);
+
+    async function startSession() {
+      currentGoal = goalInput.value.trim();
+      if (!currentGoal) return;
+
+      landing.style.display = "none";
+      chat.style.display = "flex";
+      chat.style.flexDirection = "column";
+      progressBar.style.display = "block";
+      resetBtn.style.display = "block";
+      goalDisplay.textContent = currentGoal;
+
+      const firstMsg = { role: "user", content: `I want to create a prompt that helps me: ${currentGoal}` };
+      apiHistory = [firstMsg];
+
+      await callAI();
+    }
+
+    async function callAI() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiHistory }),
+        });
+        const data = await res.json();
+        if (data.error) { addBubble("ai", "Something went wrong. Please try again."); return; }
+        processResult(data);
+      } catch (e) {
+        addBubble("ai", "Connection error. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function processResult(result) {
+      // Update stage UI
+      const stage = STAGES[result.stage] || STAGES.intake;
+      stageBar.style.display = "flex";
+      stageDot.style.background = stage.color;
+      stageLabel.textContent = stage.label;
+      stageProgress.textContent = (result.progress || 0) + "%";
+      progressFill.style.width = (result.progress || 0) + "%";
+
+      // Add AI bubble
+      addBubble("ai", result.message, result.stage);
+
+      // Push AI response to history
+      apiHistory.push({ role: "assistant", content: JSON.stringify(result) });
+
+      if (result.stage === "final" && result.finalPrompt) {
+        showFinal(result.finalPrompt);
+      } else {
+        showInputArea(result);
+      }
+
+      scrollBottom();
+    }
+
+    function showInputArea(result) {
+      inputArea.style.display = "flex";
+      inputArea.style.flexDirection = "column";
+      questionText.textContent = result.question || "";
+      optionsWrap.innerHTML = "";
+
+      if (result.options && result.options.length) {
+        result.options.forEach(opt => {
+          const btn = document.createElement("button");
+          btn.className = "option-pill";
+          btn.textContent = opt;
+          btn.addEventListener("click", () => sendAnswer(opt));
+          optionsWrap.appendChild(btn);
+        });
+      }
+
+      if (result.inputType !== "choice") {
+        answerInput.style.display = "block";
+        sendBtn.style.display = "block";
+        answerInput.focus();
+      } else {
+        answerInput.style.display = "none";
+        sendBtn.style.display = "none";
+      }
+    }
+
+    function showFinal(prompt) {
+      inputArea.style.display = "none";
+      finalWrap.style.display = "flex";
+      finalWrap.style.flexDirection = "column";
+      finalPrompt.textContent = prompt;
+      scrollBottom();
+    }
+
+    sendBtn.addEventListener("click", () => {
+      const val = answerInput.value.trim();
+      if (val) sendAnswer(val);
+    });
+
+    answerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const val = answerInput.value.trim();
+        if (val) sendAnswer(val);
+      }
+    });
+
+    async function sendAnswer(answer) {
+      inputArea.style.display = "none";
+      answerInput.value = "";
+      addBubble("user", answer);
+      apiHistory.push({ role: "user", content: answer });
+      await callAI();
+    }
+
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(finalPrompt.textContent);
+      copyBtn.textContent = "✓ Copied!";
+      copyBtn.style.background = "#10b981";
+      setTimeout(() => { copyBtn.textContent = "Copy Prompt"; copyBtn.style.background = ""; }, 2000);
+    });
+
+    [resetBtn, resetBtn2].forEach(btn => btn.addEventListener("click", resetSession));
+
+    function resetSession() {
+      apiHistory = [];
+      currentGoal = "";
+      messages.innerHTML = "";
+      goalInput.value = "";
+      startBtn.disabled = true;
+      landing.style.display = "flex";
+      chat.style.display = "none";
+      finalWrap.style.display = "none";
+      inputArea.style.display = "none";
+      progressBar.style.display = "none";
+      stageBar.style.display = "none";
+      resetBtn.style.display = "none";
+      progressFill.style.width = "0%";
+    }
+
+    function addBubble(type, text, stage) {
+      const div = document.createElement("div");
+      if (type === "ai") {
+        div.className = "bubble-ai" + (stage ? ` stage-${stage}` : "");
+        // Update border color based on stage
+        if (stage && STAGES[stage]) {
+          div.style.borderLeftColor = STAGES[stage].color;
+        }
+      } else {
+        div.className = "bubble-user";
+        const wrap = document.createElement("div");
+        wrap.style.display = "flex";
+        wrap.style.justifyContent = "flex-end";
+        wrap.appendChild(div);
+        div.textContent = text;
+        messages.appendChild(wrap);
+        return;
+      }
+      div.textContent = text;
+      messages.appendChild(div);
+    }
+
+    function setLoading(show) {
+      loading.style.display = show ? "flex" : "none";
+    }
+
+    function scrollBottom() {
+      setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
+    }
+  </script>
+</body>
+</html>
