@@ -260,6 +260,13 @@
           <span class="final-label-text">YOUR FORGED PROMPT</span>
         </div>
         <div class="final-box" id="final-prompt-text"></div>
+        <div id="optimizer-wrap" style="display:none;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;"></div>
+            <span style="font-size:11px;color:#8b5cf6;letter-spacing:0.15em;">AUTO-OPTIMIZED</span>
+          </div>
+          <div id="optimizer-changes" style="display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
         <div class="final-actions">
           <button class="btn-primary" id="run-btn">▶ Run Prompt</button>
           <button class="btn-primary" id="copy-btn">Copy Prompt</button>
@@ -394,7 +401,7 @@
       apiHistory.push({ role: "assistant", content: JSON.stringify(result) });
 
       if (result.stage === "final" && result.finalPrompt) {
-        showFinal(result.finalPrompt);
+        showFinal(result.finalPrompt, result.optimizerChanges || []);
       } else {
         showInputArea(result);
       }
@@ -467,11 +474,29 @@
       answerInput.focus();
     }
 
-    function showFinal(prompt) {
+    const optimizerWrap    = document.getElementById("optimizer-wrap");
+    const optimizerChanges = document.getElementById("optimizer-changes");
+
+    function showFinal(prompt, changes) {
       inputArea.style.display = "none";
       finalWrap.style.display = "flex";
       finalWrap.style.flexDirection = "column";
       finalPrompt.textContent = prompt;
+
+      // Show optimizer changes if any
+      optimizerChanges.innerHTML = "";
+      if (changes && changes.length > 0) {
+        optimizerWrap.style.display = "block";
+        changes.forEach(change => {
+          const item = document.createElement("div");
+          item.style.cssText = "font-size:12px;color:#a78bfa;padding:6px 10px;background:rgba(139,92,246,0.08);border-left:2px solid #8b5cf6;";
+          item.textContent = "✦ " + change;
+          optimizerChanges.appendChild(item);
+        });
+      } else {
+        optimizerWrap.style.display = "none";
+      }
+
       scrollBottom();
     }
 
@@ -663,6 +688,8 @@
       runBtn.textContent = "▶ Run Prompt";
       runRetryWrap.style.display = "none";
       runErrorMsg.style.display = "none";
+      optimizerWrap.style.display = "none";
+      optimizerChanges.innerHTML = "";
     }
 
     function addBubble(type, text, stage) {

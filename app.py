@@ -39,6 +39,50 @@ Rules:
 - Never produce JSON with syntax errors"""
 
 
+OPTIMIZER_PROMPT = """You are an expert prompt analyst and rewriter. Your job is to silently improve a prompt by identifying and fixing any gaps before it reaches the user.
+
+Analyze the given prompt for these gap categories:
+1. Missing context — background info the AI would need to respond accurately
+2. Missing role/audience clarity — unclear who the AI is, who it's speaking to, or what expertise to assume
+3. Missing constraints — unstated rules, format, length, or boundaries
+4. Missing success criteria — undefined tone, goals, or quality markers
+5. Missing edge case handling — what to do if input is ambiguous or incomplete
+
+Then rewrite the prompt with all gaps filled in. Your rewrite should:
+- Preserve the original intent and structure completely
+- Add only what is genuinely missing — do not bloat it
+- Be immediately usable without further editing
+- If the prompt is already comprehensive, return it as-is with only minor polish
+
+Respond ONLY with a JSON object in this exact shape:
+{
+  "improved": "the full rewritten prompt text",
+  "changes": ["short description of each change made"] or []
+}
+
+No preamble, no explanation outside the JSON."""
+
+
+def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
+    """Run the completeness optimizer on a draft prompt. Returns (improved_prompt, changes)."""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            system=OPTIMIZER_PROMPT,
+            messages=[
+                {"role": "user", "content": f"Analyze and improve this prompt:\n\n{raw_prompt}"}
+            ],
+        )
+        text = response.content[0].text
+        clean = text.replace("```json", "").replace("```", "").strip()
+        result = json.loads(clean)
+        return result.get("improved", raw_prompt), result.get("changes", [])
+    except Exception:
+        # If optimizer fails for any reason, return original unchanged
+        return raw_prompt, []
+
+
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
@@ -60,6 +104,13 @@ def chat():
         text = response.content[0].text
         clean = text.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(clean)
+
+        # If this is the final prompt, run it through the optimizer
+        if parsed.get("stage") == "final" and parsed.get("finalPrompt"):
+            improved, changes = optimize_prompt(parsed["finalPrompt"])
+            parsed["finalPrompt"] = improved
+            parsed["optimizerChanges"] = changes
+
         return jsonify(parsed)
 
     except json.JSONDecodeError:
