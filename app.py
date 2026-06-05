@@ -21,7 +21,6 @@ google_bp = make_google_blueprint(
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
     client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
     scope=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
-    redirect_url="/auth/google/callback",
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
@@ -290,7 +289,7 @@ def run_task_async(task_id, fn, *args):
 def auth_google():
     return redirect(url_for("google.login"))
 
-@app.route("/auth/google/callback")
+@app.route("/login/google/authorized")
 def auth_google_callback():
     if not google.authorized:
         return redirect("/")
