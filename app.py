@@ -550,7 +550,7 @@ def run_prompt():
                     # Send heartbeat every 10s to keep connection alive
                     now = time.time()
                     if now - last_heartbeat > 10:
-                        yield "data: {"heartbeat": true}\n\n"
+                        yield 'data: {"heartbeat": true}\n\n'
                         last_heartbeat = now
             yield "data: [DONE]\n\n"
 
