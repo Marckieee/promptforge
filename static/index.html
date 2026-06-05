@@ -397,30 +397,69 @@
       scrollBottom();
     }
 
+    let isMultiSelect = false;
+    let selectedPills = [];
+
     function showInputArea(result) {
       inputArea.style.display = "flex";
       inputArea.style.flexDirection = "column";
       questionText.textContent = result.question || "";
       optionsWrap.innerHTML = "";
+      answerInput.value = "";
+      isMultiSelect = result.multiSelect === true;
+      selectedPills = [];
 
       if (result.options && result.options.length) {
+        // Add hint for multi-select
+        if (isMultiSelect) {
+          const hint = document.createElement("div");
+          hint.className = "multi-hint";
+          hint.textContent = "Click to add to your answer — select multiple or type your own";
+          optionsWrap.appendChild(hint);
+        } else {
+          const hint = document.createElement("div");
+          hint.className = "multi-hint";
+          hint.textContent = "Click to fill — edit before sending if needed";
+          optionsWrap.appendChild(hint);
+        }
+
         result.options.forEach(opt => {
           const btn = document.createElement("button");
           btn.className = "option-pill";
           btn.textContent = opt;
-          btn.addEventListener("click", () => sendAnswer(opt));
+          btn.addEventListener("click", () => {
+            if (isMultiSelect) {
+              // Toggle selection
+              if (selectedPills.includes(opt)) {
+                selectedPills = selectedPills.filter(p => p !== opt);
+                btn.classList.remove("selected");
+              } else {
+                selectedPills.push(opt);
+                btn.classList.add("selected");
+              }
+              // Build answer from selected pills + any typed text
+              const typed = answerInput.value.replace(/^[\s,]+|[\s,]+$/g, "");
+              const pillText = selectedPills.join(", ");
+              if (typed && !selectedPills.some(p => typed.includes(p))) {
+                answerInput.value = pillText ? pillText + ", " + typed : typed;
+              } else {
+                answerInput.value = pillText;
+              }
+            } else {
+              // Single select — fill text box, deselect others
+              document.querySelectorAll(".option-pill").forEach(b => b.classList.remove("selected"));
+              btn.classList.add("selected");
+              answerInput.value = opt;
+            }
+            answerInput.focus();
+          });
           optionsWrap.appendChild(btn);
         });
       }
 
-      if (result.inputType !== "choice") {
-        answerInput.style.display = "block";
-        sendBtn.style.display = "block";
-        answerInput.focus();
-      } else {
-        answerInput.style.display = "none";
-        sendBtn.style.display = "none";
-      }
+      answerInput.style.display = "block";
+      sendBtn.style.display = "block";
+      answerInput.focus();
     }
 
     function showFinal(prompt) {
