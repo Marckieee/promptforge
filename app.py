@@ -104,6 +104,17 @@ def init_db():
             )
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS personal_prompts (
+                id          SERIAL PRIMARY KEY,
+                user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                goal        TEXT,
+                prompt      TEXT NOT NULL,
+                title       TEXT,
+                created_at  TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
         conn.commit()
         cur.close()
         conn.close()
@@ -476,6 +487,56 @@ def delete_team_prompt(team_id, prompt_id):
         conn.commit()
         cur.close()
         conn.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── PERSONAL LIBRARY ROUTES ──────────────────────────────────
+@app.route("/api/library", methods=["GET"])
+def get_library():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Not logged in"}), 401
+    try:
+        conn = get_db()
+        cur  = conn.cursor()
+        cur.execute("SELECT * FROM personal_prompts WHERE user_id = %s ORDER BY created_at DESC", (user["id"],))
+        prompts = [dict(r) for r in cur.fetchall()]
+        cur.close(); conn.close()
+        return jsonify(prompts)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/library", methods=["POST"])
+def save_library():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Not logged in"}), 401
+    data = request.get_json()
+    try:
+        conn = get_db()
+        cur  = conn.cursor()
+        cur.execute("""
+            INSERT INTO personal_prompts (user_id, goal, prompt, title)
+            VALUES (%s, %s, %s, %s) RETURNING id
+        """, (user["id"], data.get("goal",""), data.get("prompt",""), data.get("title","")))
+        pid = cur.fetchone()["id"]
+        conn.commit(); cur.close(); conn.close()
+        return jsonify({"ok": True, "id": pid})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/library/<int:prompt_id>", methods=["DELETE"])
+def delete_library(prompt_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Not logged in"}), 401
+    try:
+        conn = get_db()
+        cur  = conn.cursor()
+        cur.execute("DELETE FROM personal_prompts WHERE id = %s AND user_id = %s", (prompt_id, user["id"]))
+        conn.commit(); cur.close(); conn.close()
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

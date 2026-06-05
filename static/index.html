@@ -1218,15 +1218,15 @@
     });
 
     // ── LIBRARY PANEL ─────────────────────────────────────────
-    document.getElementById("library-btn").addEventListener("click", () => {
-      renderLibrary();
+    document.getElementById("library-btn").addEventListener("click", async () => {
       document.getElementById("library-panel").style.display = "flex";
+      await renderLibrary();
     });
     document.getElementById("library-close").addEventListener("click", () => {
       document.getElementById("library-panel").style.display = "none";
     });
-    document.getElementById("library-search").addEventListener("input", (e) => {
-      renderLibrary(e.target.value.toLowerCase());
+    document.getElementById("library-search").addEventListener("input", async (e) => {
+      await renderLibrary(e.target.value.toLowerCase());
     });
     document.getElementById("save-library-btn").addEventListener("click", () => {
       const prompt = finalPrompt.textContent;
@@ -1412,10 +1412,10 @@
       const menu = document.getElementById("mobile-menu");
       menu.style.display = menu.style.display === "flex" ? "none" : "flex";
     });
-    document.getElementById("mobile-library-btn").addEventListener("click", () => {
+    document.getElementById("mobile-library-btn").addEventListener("click", async () => {
       document.getElementById("mobile-menu").style.display = "none";
-      renderLibrary();
       document.getElementById("library-panel").style.display = "flex";
+      await renderLibrary();
     });
     document.getElementById("mobile-prefs-btn").addEventListener("click", () => {
       document.getElementById("mobile-menu").style.display = "none";
