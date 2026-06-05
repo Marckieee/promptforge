@@ -1213,8 +1213,16 @@
     document.querySelectorAll(".assess-opt").forEach(btn => {
       btn.addEventListener("click", () => {
         const q = btn.dataset.q;
-        document.querySelectorAll(`.assess-opt[data-q="${q}"]`).forEach(b => b.classList.remove("selected"));
+        // Only deselect pills in the SAME question group
+        document.querySelectorAll(`.assess-opt[data-q="${q}"]`).forEach(b => {
+          b.classList.remove("selected");
+          b.style.borderColor = "";
+          b.style.color = "";
+        });
+        // Highlight selected pill
         btn.classList.add("selected");
+        btn.style.borderColor = "#f59e0b";
+        btn.style.color = "#f59e0b";
         assessAnswers[q] = btn.dataset.v;
         const saveBtn = document.getElementById("assess-save");
         saveBtn.disabled = Object.keys(assessAnswers).length < 3;
