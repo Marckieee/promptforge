@@ -1,8 +1,7 @@
 import os
 import json
 import threading
-import psycopg2
-import psycopg2.extras
+import psycopg
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 import anthropic
 
@@ -15,7 +14,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # ── DATABASE ─────────────────────────────────────────────────
 def get_db():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return psycopg.connect(DATABASE_URL, row_factory=psycopg.rows.dict_row)
 
 def init_db():
     try:
