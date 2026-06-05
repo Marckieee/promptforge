@@ -930,7 +930,8 @@
     async function sendAnswer(answer) {
       inputArea.style.display = "none";
       answerInput.value = "";
-      addBubble("user", answer);
+      const historyIndex = apiHistory.length; // index before pushing
+      addBubble("user", answer, null, historyIndex);
       apiHistory.push({ role: "user", content: answer });
       await callAI();
     }
@@ -1580,26 +1581,86 @@
     // ─────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
 
-    function addBubble(type, text, stage) {
+    function addBubble(type, text, stage, historyIndex) {
       const div = document.createElement("div");
       if (type === "ai") {
         div.className = "bubble-ai" + (stage ? ` stage-${stage}` : "");
-        // Update border color based on stage
         if (stage && STAGES[stage]) {
           div.style.borderLeftColor = STAGES[stage].color;
         }
+        div.textContent = text;
+        messages.appendChild(div);
       } else {
         div.className = "bubble-user";
-        const wrap = document.createElement("div");
-        wrap.style.display = "flex";
-        wrap.style.justifyContent = "flex-end";
-        wrap.appendChild(div);
         div.textContent = text;
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✎ Edit";
+        editBtn.style.cssText = "background:none;border:none;color:#3a3a50;cursor:pointer;font-size:10px;padding:2px 6px;margin-top:4px;letter-spacing:0.05em;display:block;margin-left:auto;";
+        editBtn.addEventListener("mouseenter", () => editBtn.style.color = "#f59e0b");
+        editBtn.addEventListener("mouseleave", () => editBtn.style.color = "#3a3a50");
+        editBtn.addEventListener("click", () => editAnswer(historyIndex, text));
+
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;";
+        wrap.appendChild(div);
+        wrap.appendChild(editBtn);
         messages.appendChild(wrap);
-        return;
       }
-      div.textContent = text;
-      messages.appendChild(div);
+    }
+
+    function editAnswer(historyIndex, oldText) {
+      if (historyIndex === undefined) return;
+
+      // Roll back apiHistory to just before this user message
+      apiHistory = apiHistory.slice(0, historyIndex);
+
+      // Remove all bubbles from this point onward
+      const allBubbles = messages.querySelectorAll(".bubble-ai, .bubble-user");
+      let bubbleCount = 0;
+      let userCount   = 0;
+      // Count how many user messages are before historyIndex
+      // historyIndex counts only user turns (every 2 items: user, assistant, user, assistant...)
+      const userTurnIndex = Math.floor(historyIndex / 2);
+      messages.querySelectorAll(".bubble-ai, .bubble-user").forEach((el, i) => {});
+
+      // Simpler approach: count user bubbles and remove from the nth one onward
+      const wraps = messages.querySelectorAll("div > .bubble-user");
+      let found = false;
+      wraps.forEach(bubble => {
+        const wrap = bubble.parentElement;
+        if (!found) {
+          // Check if this bubble's text matches — find the right one by historyIndex
+          const bubbleUserIndex = [...messages.querySelectorAll("div > .bubble-user")].indexOf(bubble);
+          if (bubbleUserIndex >= userTurnIndex) {
+            found = true;
+          }
+        }
+        if (found) {
+          // Remove this user bubble and all following AI bubbles
+          let next = wrap;
+          while (next) {
+            const toRemove = next;
+            next = next.nextElementSibling;
+            toRemove.remove();
+          }
+        }
+      });
+
+      // Also remove standalone AI bubbles that follow
+      // Put old answer in text box for editing
+      answerInput.value = oldText;
+      inputArea.style.display = "flex";
+      inputArea.style.flexDirection = "column";
+      questionText.textContent = "Edit your answer:";
+      optionsWrap.innerHTML = "";
+      answerInput.focus();
+
+      // Hide final wrap if it was showing
+      finalWrap.style.display = "none";
+      checkpointCard.style.display = "none";
+
+      scrollBottom();
     }
 
     function setLoading(show) {
