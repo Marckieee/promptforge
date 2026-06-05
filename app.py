@@ -3,7 +3,8 @@ import json
 from flask import Flask, request, jsonify, send_from_directory
 import anthropic
 
-app = Flask(__name__, static_folder="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "static"))
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -37,7 +38,7 @@ Rules:
 
 @app.route("/")
 def index():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -54,7 +55,6 @@ def chat():
         )
 
         text = response.content[0].text
-        # Strip markdown code fences if present
         clean = text.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(clean)
         return jsonify(parsed)
