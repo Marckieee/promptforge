@@ -205,6 +205,15 @@
       <button class="btn-secondary" id="library-btn" style="font-size:11px;padding:8px 14px;">📚 Library</button>
       <button class="btn-secondary" id="prefs-btn" style="font-size:11px;padding:8px 14px;">⚙ Preferences</button>
       <button class="btn-secondary" id="reset-btn" style="display:none">↩ New Session</button>
+      <div id="auth-area" style="display:flex;gap:8px;align-items:center;">
+        <a href="/auth/google" id="login-btn" class="btn-secondary" style="font-size:11px;padding:8px 14px;text-decoration:none;display:none;">🔑 Sign in with Google</a>
+        <div id="user-menu" style="display:none;align-items:center;gap:8px;">
+          <img id="user-avatar" src="" style="width:28px;height:28px;border-radius:50%;border:1px solid #2a2a35;" />
+          <span id="user-name" style="font-size:12px;color:#a09888;"></span>
+          <button class="btn-secondary" id="team-btn" style="font-size:11px;padding:8px 14px;">👥 Team</button>
+          <a href="/auth/logout" class="btn-secondary" style="font-size:11px;padding:8px 14px;text-decoration:none;">Sign out</a>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -342,6 +351,56 @@
     </div>
 
   </main>
+
+  <!-- TEAM PANEL -->
+  <div id="team-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-start;justify-content:flex-end;">
+    <div style="background:#0d0d16;border-left:1px solid #2a2a35;height:100%;width:90%;max-width:440px;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:24px;border-bottom:1px solid #1a1a25;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="font-size:13px;color:#f59e0b;letter-spacing:0.1em;">👥 TEAM WORKSPACE</div>
+        <button class="btn-secondary" id="team-close" style="padding:6px 12px;font-size:11px;">✕ Close</button>
+      </div>
+
+      <!-- Create team -->
+      <div style="padding:16px 24px;border-bottom:1px solid #1a1a25;flex-shrink:0;">
+        <div class="input-label" style="margin-bottom:8px;">CREATE A NEW TEAM</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="team-name-input" placeholder="Team name..." style="flex:1;"/>
+          <button class="btn-primary" id="create-team-btn" style="padding:10px 16px;font-size:12px;white-space:nowrap;">Create</button>
+        </div>
+      </div>
+
+      <!-- My teams -->
+      <div style="padding:16px 24px;border-bottom:1px solid #1a1a25;flex-shrink:0;">
+        <div class="input-label" style="margin-bottom:8px;">MY TEAMS</div>
+        <div id="my-teams-list" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:12px;color:#3a3a50;">No teams yet — create one above.</div>
+        </div>
+      </div>
+
+      <!-- Team prompts -->
+      <div style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;">
+        <div id="team-prompts-header" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="input-label" id="team-prompts-title">TEAM PROMPTS</div>
+            <button class="btn-secondary" id="save-team-prompt-btn" style="font-size:11px;padding:6px 12px;display:none;">+ Save Current</button>
+          </div>
+        </div>
+        <div id="team-prompts-list" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:12px;color:#3a3a50;text-align:center;padding:20px 0;">Select a team to view shared prompts.</div>
+        </div>
+      </div>
+
+      <!-- Invite section -->
+      <div id="invite-section" style="display:none;padding:16px 24px;border-top:1px solid #1a1a25;flex-shrink:0;">
+        <div class="input-label" style="margin-bottom:8px;">INVITE MEMBERS</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input type="text" id="invite-email" placeholder="Email (optional)..." style="flex:1;font-size:12px;"/>
+          <button class="btn-primary" id="gen-invite-btn" style="padding:10px 16px;font-size:12px;white-space:nowrap;">Get Link</button>
+        </div>
+        <div id="invite-link-wrap" style="display:none;background:#111118;border:1px solid #2a2a35;padding:10px;font-size:11px;color:#a09888;word-break:break-all;"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- PREFERENCES MODAL -->
   <div id="prefs-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
@@ -1276,6 +1335,148 @@
 
     // Check on load
     checkForSavedSession();
+
+    // ── AUTH & TEAM (Phase 3) ─────────────────────────────────
+    let currentUser = null;
+    let currentTeamId = null;
+    let myTeams = [];
+
+    async function loadMe() {
+      try {
+        const res  = await fetch("/api/me");
+        const data = await res.json();
+        if (data.loggedIn) {
+          currentUser = data.user;
+          myTeams     = data.teams || [];
+          document.getElementById("login-btn").style.display   = "none";
+          document.getElementById("user-menu").style.display   = "flex";
+          document.getElementById("user-name").textContent     = currentUser.name.split(" ")[0];
+          document.getElementById("user-avatar").src           = currentUser.avatar || "";
+        } else {
+          document.getElementById("login-btn").style.display   = "block";
+          document.getElementById("user-menu").style.display   = "none";
+        }
+      } catch {}
+    }
+
+    loadMe();
+
+    // Team panel
+    document.getElementById("team-btn").addEventListener("click", () => {
+      renderMyTeams();
+      document.getElementById("team-panel").style.display = "flex";
+    });
+    document.getElementById("team-close").addEventListener("click", () => {
+      document.getElementById("team-panel").style.display = "none";
+    });
+
+    document.getElementById("create-team-btn").addEventListener("click", async () => {
+      const name = document.getElementById("team-name-input").value.trim();
+      if (!name) return;
+      const res  = await fetch("/api/teams", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({name})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById("team-name-input").value = "";
+        await loadMe();
+        renderMyTeams();
+      }
+    });
+
+    function renderMyTeams() {
+      const list = document.getElementById("my-teams-list");
+      if (!myTeams.length) {
+        list.innerHTML = '<div style="font-size:12px;color:#3a3a50;">No teams yet — create one above.</div>';
+        return;
+      }
+      list.innerHTML = "";
+      myTeams.forEach(team => {
+        const btn = document.createElement("button");
+        btn.className = "option-pill";
+        btn.style.cssText = "font-size:12px;text-align:left;" + (currentTeamId===team.id?"border-color:#f59e0b;color:#f59e0b;":"");
+        btn.textContent = team.name + (team.role==="owner" ? " ★" : "");
+        btn.addEventListener("click", () => selectTeam(team.id, team.name, team.role));
+        list.appendChild(btn);
+      });
+    }
+
+    async function selectTeam(teamId, teamName, role) {
+      currentTeamId = teamId;
+      document.getElementById("team-prompts-header").style.display = "block";
+      document.getElementById("team-prompts-title").textContent    = teamName.toUpperCase() + " PROMPTS";
+      document.getElementById("invite-section").style.display      = "block";
+      const saveBtn = document.getElementById("save-team-prompt-btn");
+      saveBtn.style.display = finalPrompt.textContent ? "block" : "none";
+      renderMyTeams();
+      await loadTeamPrompts(teamId);
+    }
+
+    async function loadTeamPrompts(teamId) {
+      const list = document.getElementById("team-prompts-list");
+      list.innerHTML = '<div style="font-size:12px;color:#3a3a50;">Loading...</div>';
+      try {
+        const res     = await fetch(`/api/teams/${teamId}/prompts`);
+        const prompts = await res.json();
+        if (!prompts.length) {
+          list.innerHTML = '<div style="font-size:12px;color:#3a3a50;text-align:center;padding:20px 0;">No prompts saved yet.</div>';
+          return;
+        }
+        list.innerHTML = "";
+        prompts.forEach(p => {
+          const card = document.createElement("div");
+          card.style.cssText = "background:#111118;border:1px solid #1a1a25;padding:14px;display:flex;flex-direction:column;gap:8px;";
+          const date = new Date(p.created_at).toLocaleDateString("en-SG",{day:"numeric",month:"short"});
+          card.innerHTML = `
+            <div style="font-size:11px;color:#3a3a50;display:flex;justify-content:space-between;">
+              <span>${p.saved_by || "Unknown"} · ${date}</span>
+              <button onclick="deleteTeamPrompt(${teamId},${p.id})" style="background:none;border:none;color:#3a3a50;cursor:pointer;font-size:11px;padding:0;">✕</button>
+            </div>
+            <div style="font-size:12px;color:#f59e0b;">${(p.goal||"").slice(0,70)}${(p.goal||"").length>70?"...":""}</div>
+            <div style="font-size:11px;color:#5a5a6e;line-height:1.6;">${p.prompt.slice(0,100)}...</div>
+            <div style="display:flex;gap:8px;">
+              <button class="option-pill" style="font-size:11px;" onclick="navigator.clipboard.writeText(${JSON.stringify(p.prompt)});this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',1500);">Copy</button>
+              <button class="option-pill" style="font-size:11px;" onclick="useLibraryPrompt(${JSON.stringify(p.prompt)});">Use →</button>
+            </div>`;
+          list.appendChild(card);
+        });
+      } catch {
+        list.innerHTML = '<div style="font-size:12px;color:#f87171;">Failed to load prompts.</div>';
+      }
+    }
+
+    async function deleteTeamPrompt(teamId, promptId) {
+      await fetch(`/api/teams/${teamId}/prompts/${promptId}`, {method:"DELETE"});
+      loadTeamPrompts(teamId);
+    }
+
+    document.getElementById("save-team-prompt-btn").addEventListener("click", async () => {
+      if (!currentTeamId || !finalPrompt.textContent) return;
+      await fetch(`/api/teams/${currentTeamId}/prompts`, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ goal: currentGoal, prompt: finalPrompt.textContent, title: currentGoal.slice(0,60) })
+      });
+      document.getElementById("save-team-prompt-btn").textContent = "✓ Saved!";
+      setTimeout(() => { document.getElementById("save-team-prompt-btn").textContent = "+ Save Current"; }, 2000);
+      loadTeamPrompts(currentTeamId);
+    });
+
+    document.getElementById("gen-invite-btn").addEventListener("click", async () => {
+      if (!currentTeamId) return;
+      const email = document.getElementById("invite-email").value.trim() || null;
+      const res   = await fetch(`/api/teams/${currentTeamId}/invite`, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email})
+      });
+      const data  = await res.json();
+      if (data.inviteUrl) {
+        const wrap = document.getElementById("invite-link-wrap");
+        wrap.style.display  = "block";
+        wrap.innerHTML      = `<span style="color:#10b981;">✓ Invite link:</span><br>${data.inviteUrl} <button class="option-pill" style="font-size:10px;margin-top:6px;" onclick="navigator.clipboard.writeText('${data.inviteUrl}');this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy link',1500);">Copy link</button>`;
+      }
+    });
+    // ─────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
 
     function addBubble(type, text, stage) {
