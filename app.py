@@ -68,18 +68,41 @@ def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2000,
+            max_tokens=4000,
             system=OPTIMIZER_PROMPT,
             messages=[
                 {"role": "user", "content": f"Analyze and improve this prompt:\n\n{raw_prompt}"}
             ],
         )
         text = response.content[0].text
-        clean = text.replace("```json", "").replace("```", "").strip()
+
+        # Try to extract JSON even if there's extra text around it
+        clean = text.strip()
+
+        # Strip markdown fences
+        clean = clean.replace("```json", "").replace("```", "").strip()
+
+        # If there's extra text before/after the JSON object, extract just the JSON
+        start = clean.find("{")
+        end = clean.rfind("}") + 1
+        if start != -1 and end > start:
+            clean = clean[start:end]
+
         result = json.loads(clean)
-        return result.get("improved", raw_prompt), result.get("changes", [])
+        improved = result.get("improved", "").strip()
+        changes = result.get("changes", [])
+
+        # Only use improved version if it's non-empty and reasonably sized
+        if improved and len(improved) > len(raw_prompt) * 0.5:
+            return improved, changes
+        else:
+            return raw_prompt, []
+
+    except json.JSONDecodeError:
+        # JSON parse failed — return original silently
+        return raw_prompt, []
     except Exception:
-        # If optimizer fails for any reason, return original unchanged
+        # Any other failure — return original silently
         return raw_prompt, []
 
 
