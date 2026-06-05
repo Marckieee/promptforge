@@ -211,6 +211,14 @@
     <span id="stage-progress"></span>
   </div>
 
+  <!-- RESUME BANNER -->
+  <div id="resume-banner" style="display:none; background:#0d0d16; border-bottom:1px solid #f59e0b; padding:12px 32px; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
+    <span style="font-size:12px;color:#a09888;flex:1;">You have an unfinished session — <span id="resume-goal-preview" style="color:#f59e0b;"></span></span>
+    <button class="btn-primary" id="resume-btn" style="padding:8px 20px;font-size:12px;">Resume Session</button>
+    <button class="btn-secondary" id="discard-btn" style="padding:8px 16px;font-size:12px;">Discard</button>
+  </div>
+
   <main>
 
     <!-- LANDING -->
@@ -250,6 +258,7 @@
     <!-- CHAT -->
     <div id="chat">
       <div class="goal-recap"><span>Goal: </span><span id="goal-display"></span></div>
+      <div class="save-indicator" id="save-indicator">AUTOSAVE ON</div>
       <div id="messages"></div>
       <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
 
@@ -315,8 +324,79 @@
       final:   { label: "COMPLETE!",            color: "#10b981" },
     };
 
+    const SAVE_KEY = "promptforge_session";
+
     let apiHistory = [];
     let currentGoal = "";
+
+    // ── AUTOSAVE ──────────────────────────────────────────────
+    function saveSession(extra = {}) {
+      try {
+        const session = {
+          goal: currentGoal,
+          apiHistory,
+          bubbles: getBubbleData(),
+          savedAt: Date.now(),
+          ...extra,
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(session));
+        flashSaveIndicator();
+      } catch (e) {}
+    }
+
+    function clearSave() {
+      localStorage.removeItem(SAVE_KEY);
+    }
+
+    function loadSave() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+
+    function flashSaveIndicator() {
+      const el = document.getElementById("save-indicator");
+      if (!el) return;
+      el.textContent = "✓ SAVED";
+      el.classList.add("saved");
+      setTimeout(() => { el.textContent = "AUTOSAVE ON"; el.classList.remove("saved"); }, 1500);
+    }
+
+    function getBubbleData() {
+      const bubbles = [];
+      messages.querySelectorAll(".bubble-ai, .bubble-user").forEach(el => {
+        bubbles.push({
+          type: el.classList.contains("bubble-user") ? "user" : "ai",
+          text: el.textContent,
+          stage: [...el.classList].find(c => c.startsWith("stage-"))?.replace("stage-", "") || null,
+          borderColor: el.style.borderLeftColor || null,
+        });
+      });
+      return bubbles;
+    }
+
+    function restoreBubbles(bubbles) {
+      bubbles.forEach(b => {
+        if (b.type === "ai") {
+          const div = document.createElement("div");
+          div.className = "bubble-ai" + (b.stage ? " stage-" + b.stage : "");
+          if (b.borderColor) div.style.borderLeftColor = b.borderColor;
+          div.textContent = b.text;
+          messages.appendChild(div);
+        } else {
+          const div = document.createElement("div");
+          div.className = "bubble-user";
+          const wrap = document.createElement("div");
+          wrap.style.display = "flex";
+          wrap.style.justifyContent = "flex-end";
+          wrap.appendChild(div);
+          div.textContent = b.text;
+          messages.appendChild(wrap);
+        }
+      });
+    }
+    // ─────────────────────────────────────────────────────────
 
     // Elements
     const goalInput    = document.getElementById("goal-input");
@@ -399,6 +479,9 @@
 
       // Push AI response to history
       apiHistory.push({ role: "assistant", content: JSON.stringify(result) });
+
+      // Autosave after every stage
+      saveSession({ lastStage: result.stage, lastResult: result });
 
       if (result.stage === "final" && result.finalPrompt) {
         showFinal(result.finalPrompt, result.optimizerChanges || []);
@@ -670,6 +753,7 @@
     [resetBtn, resetBtn2].forEach(btn => btn.addEventListener("click", resetSession));
 
     function resetSession() {
+      clearSave();
       apiHistory = [];
       currentGoal = "";
       messages.innerHTML = "";
@@ -690,7 +774,69 @@
       runErrorMsg.style.display = "none";
       optimizerWrap.style.display = "none";
       optimizerChanges.innerHTML = "";
+      document.getElementById("resume-banner").style.display = "none";
     }
+
+    // ── RESUME LOGIC ─────────────────────────────────────────
+    function checkForSavedSession() {
+      const session = loadSave();
+      if (!session || !session.goal) return;
+
+      // Show resume banner
+      const banner = document.getElementById("resume-banner");
+      const preview = document.getElementById("resume-goal-preview");
+      preview.textContent = session.goal.length > 60 ? session.goal.slice(0, 60) + "..." : session.goal;
+      banner.style.display = "flex";
+
+      document.getElementById("resume-btn").addEventListener("click", () => {
+        banner.style.display = "none";
+        resumeSession(session);
+      });
+
+      document.getElementById("discard-btn").addEventListener("click", () => {
+        clearSave();
+        banner.style.display = "none";
+      });
+    }
+
+    function resumeSession(session) {
+      currentGoal = session.goal;
+      apiHistory = session.apiHistory || [];
+
+      // Show chat UI
+      landing.style.display = "none";
+      chat.style.display = "flex";
+      chat.style.flexDirection = "column";
+      progressBar.style.display = "block";
+      stageBar.style.display = "flex";
+      resetBtn.style.display = "block";
+      goalDisplay.textContent = currentGoal;
+
+      // Restore chat bubbles
+      if (session.bubbles) restoreBubbles(session.bubbles);
+
+      // Restore last stage UI
+      const last = session.lastResult;
+      if (last) {
+        const stage = STAGES[last.stage] || STAGES.intake;
+        stageDot.style.background = stage.color;
+        stageLabel.textContent = stage.label;
+        stageProgress.textContent = (last.progress || 0) + "%";
+        progressFill.style.width = (last.progress || 0) + "%";
+
+        if (last.stage === "final" && last.finalPrompt) {
+          showFinal(last.finalPrompt, last.optimizerChanges || []);
+        } else {
+          showInputArea(last);
+        }
+      }
+
+      scrollBottom();
+    }
+
+    // Check on load
+    checkForSavedSession();
+    // ─────────────────────────────────────────────────────────
 
     function addBubble(type, text, stage) {
       const div = document.createElement("div");
