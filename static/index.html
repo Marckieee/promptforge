@@ -491,7 +491,12 @@
       stageBar.style.display = "flex";
       stageDot.style.background = stage.color;
       stageLabel.textContent = stage.label;
-      stageProgress.textContent = (result.progress || 0) + "%";
+      // Show question index if available, otherwise show progress %
+      if (result.questionIndex && result.stage !== "final") {
+        stageProgress.textContent = "Question " + result.questionIndex + " of ~5";
+      } else {
+        stageProgress.textContent = (result.progress || 0) + "%";
+      }
       progressFill.style.width = (result.progress || 0) + "%";
 
       // Add AI bubble
