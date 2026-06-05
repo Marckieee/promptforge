@@ -34,7 +34,7 @@ Rules:
 - Set multiSelect to true when the question benefits from multiple answers (e.g. tone, audience, goals, features). Set to false for single-answer questions (e.g. format, length, yes/no)
 - Options are always editable suggestions — the user may modify them before sending
 - Progress should reflect how close we are to the final prompt (0 at start, 100 when final)
-- When you have enough info, move to "final" and produce a masterfully crafted prompt
+- When you have enough info, move to "final" and produce a masterfully crafted prompt IMMEDIATELY — never announce that you are about to produce the prompt, never ask for confirmation, never say "let me put it together" or similar. Just set stage to "final" and include the finalPrompt in the same response.
 - The finalPrompt should be detailed, structured, and immediately usable
 - Never produce JSON with syntax errors"""
 
