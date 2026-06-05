@@ -268,21 +268,29 @@ Respond ONLY with JSON: {"improved": "full rewritten prompt", "changes": ["chang
 
 
 
-SPLITTER_PROMPT = """You are a prompt execution planner. Given a prompt, decide if it needs to be split into sequential parts for better output quality and to avoid timeouts.
+SPLITTER_PROMPT = """You are a prompt execution planner. Your job is to split complex prompts into smaller sequential parts so each part can be answered fully without timing out.
 
-A prompt needs splitting if it:
-- Requests multi-day itineraries, plans, or schedules
-- Asks for comprehensive guides with multiple distinct sections
+ALWAYS split if the prompt:
+- Requests a multi-day itinerary or schedule (split by day groups e.g. Day 1-2, Day 3-4, Day 5-6)
+- Asks for a comprehensive guide with multiple distinct sections
 - Requests comparisons across many items
-- Would naturally produce more than 800 words in one response
+- Would naturally produce more than 600 words
 
-If splitting is needed, return 3-5 logical sub-prompts that together cover the full request.
-If no splitting needed, return just the original prompt as a single item.
+HOW TO SPLIT:
+- Each sub-prompt must be self-contained and reference the original context
+- For itineraries: split by day groups, always include a brief "Overview & Tips" first
+- For guides: split by major sections
+- Aim for 3-5 parts
 
-Respond ONLY with a JSON array of strings — each string is a standalone prompt to run sequentially:
-["sub-prompt 1", "sub-prompt 2", "sub-prompt 3"]
+Example for "6 day Chengdu itinerary focused on photography and food":
+[
+  "You are an expert travel planner. Provide an overview and key practical tips for a 6-day photography and food-focused trip to Chengdu, including best neighbourhoods, transport tips, and photography timing advice.",
+  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 1 and Day 2 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots.",
+  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 3 and Day 4 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots.",
+  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 5 and Day 6 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots."
+]
 
-No preamble, no explanation outside the JSON array."""
+Respond ONLY with a valid JSON array of strings. No preamble, no explanation outside the array."""
 
 # ── BACKGROUND HELPERS ────────────────────────────────────────
 def build_checkpoint(messages):
@@ -617,14 +625,24 @@ def get_prompt_chunks(prompt: str) -> list[str]:
             system=SPLITTER_PROMPT,
             messages=[{"role": "user", "content": f"Should this prompt be split? If yes, split it:\n\n{prompt}"}],
         )
-        text = response.content[0].text.replace("```json","").replace("```","").strip()
-        start = text.find("["); end = text.rfind("]") + 1
+        text = response.content[0].text.strip()
+
+        # Strip markdown fences
+        text = text.replace("```json", "").replace("```", "").strip()
+
+        # Extract JSON array
+        start = text.find("[")
+        end   = text.rfind("]") + 1
         if start != -1 and end > start:
             chunks = json.loads(text[start:end])
-            if isinstance(chunks, list) and len(chunks) > 0:
+            if isinstance(chunks, list) and len(chunks) > 1:
+                print(f"Splitting into {len(chunks)} chunks")
                 return chunks
-    except Exception:
-        pass
+            elif isinstance(chunks, list) and len(chunks) == 1:
+                # Only one chunk returned — no split needed
+                return [prompt]
+    except Exception as e:
+        print(f"Splitter error: {e}")
     return [prompt]
 
 
