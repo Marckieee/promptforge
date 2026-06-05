@@ -350,12 +350,20 @@
             <div class="dot" style="width:5px;height:5px;animation-delay:0.2s;"></div>
             <div class="dot" style="width:5px;height:5px;animation-delay:0.4s;"></div>
           </div>
+          <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:DM Mono,monospace; font-size:11px; padding:4px 12px; cursor:pointer; letter-spacing:0.08em;">■ Stop</button>
           <div id="run-error-msg" style="display:none; font-size:11px; color:#f87171; margin-left:4px;"></div>
         </div>
         <div id="run-result" style="background:#0d0d16;border:1px solid #3b82f6;padding:24px;font-size:13px;line-height:1.8;color:#c8d8f0;white-space:pre-wrap;word-break:break-word;min-height:60px;"></div>
         <div id="run-retry-wrap" style="display:none; gap:10px; align-items:center;">
           <button class="btn-primary" id="retry-btn" style="background:#f59e0b;">↺ Retry</button>
           <span style="font-size:11px; color:#5a5a6e;">Response may have been cut off</span>
+        </div>
+        <div id="run-continue-wrap" style="display:none; flex-direction:column; gap:10px; padding:14px; background:#111118; border:1px solid #f59e0b;">
+          <div style="font-size:12px; color:#f59e0b;">✦ First part loaded — does this look right?</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-primary" id="continue-btn">▶ Continue Loading</button>
+            <button class="btn-secondary" id="stop-here-btn">✓ Stop Here</button>
+          </div>
         </div>
       </div>
       </div>
@@ -964,6 +972,8 @@
       runLoading.style.display = "flex";
       runRetryWrap.style.display = "none";
       runErrorMsg.style.display = "none";
+      if (document.getElementById("run-continue-wrap")) document.getElementById("run-continue-wrap").style.display = "none";
+      if (document.getElementById("stop-btn")) document.getElementById("stop-btn").style.display = "none";
       runStatusDot.style.background = "#3b82f6";
       runStatusLabel.style.color = "#3b82f6";
       runStatusLabel.textContent = "AI RESPONSE";
@@ -1307,6 +1317,8 @@
       runBtn.textContent = "▶ Run Prompt";
       runRetryWrap.style.display = "none";
       runErrorMsg.style.display = "none";
+      if (document.getElementById("run-continue-wrap")) document.getElementById("run-continue-wrap").style.display = "none";
+      if (document.getElementById("stop-btn")) document.getElementById("stop-btn").style.display = "none";
       optimizerWrap.style.display = "none";
       optimizerChanges.innerHTML = "";
       checkpointCard.style.display = "none";
