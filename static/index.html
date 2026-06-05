@@ -1016,6 +1016,13 @@
                 const parsed = JSON.parse(data);
                 if (parsed.heartbeat) continue; // keep-alive, ignore
                 if (parsed.text) {
+                  // Detect section headers to update status label
+                  if (parsed.text.includes("─── Part")) {
+                    const match = parsed.text.match(/Part (\d+) of (\d+)/);
+                    if (match) {
+                      runStatusLabel.textContent = `GENERATING PART ${match[1]} OF ${match[2]}`;
+                    }
+                  }
                   runResult.textContent += parsed.text;
                   resetTimeout(() => { controller.abort(); }); // reset on each chunk
                   scrollBottom();

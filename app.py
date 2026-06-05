@@ -256,6 +256,23 @@ OPTIMIZER_PROMPT = """You are an expert prompt analyst. Improve the given prompt
 Respond ONLY with JSON: {"improved": "full rewritten prompt", "changes": ["change 1", "change 2"]}"""
 
 
+
+SPLITTER_PROMPT = """You are a prompt execution planner. Given a prompt, decide if it needs to be split into sequential parts for better output quality and to avoid timeouts.
+
+A prompt needs splitting if it:
+- Requests multi-day itineraries, plans, or schedules
+- Asks for comprehensive guides with multiple distinct sections
+- Requests comparisons across many items
+- Would naturally produce more than 800 words in one response
+
+If splitting is needed, return 3-5 logical sub-prompts that together cover the full request.
+If no splitting needed, return just the original prompt as a single item.
+
+Respond ONLY with a JSON array of strings — each string is a standalone prompt to run sequentially:
+["sub-prompt 1", "sub-prompt 2", "sub-prompt 3"]
+
+No preamble, no explanation outside the JSON array."""
+
 # ── BACKGROUND HELPERS ────────────────────────────────────────
 def build_checkpoint(messages):
     try:
@@ -530,6 +547,26 @@ def task_result():
         return jsonify({"ready": True, "result": result})
     return jsonify({"ready": False})
 
+def get_prompt_chunks(prompt: str) -> list[str]:
+    """Split a complex prompt into sequential chunks if needed."""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            system=SPLITTER_PROMPT,
+            messages=[{"role": "user", "content": f"Should this prompt be split? If yes, split it:\n\n{prompt}"}],
+        )
+        text = response.content[0].text.replace("```json","").replace("```","").strip()
+        start = text.find("["); end = text.rfind("]") + 1
+        if start != -1 and end > start:
+            chunks = json.loads(text[start:end])
+            if isinstance(chunks, list) and len(chunks) > 0:
+                return chunks
+    except Exception:
+        pass
+    return [prompt]
+
+
 @app.route("/api/run", methods=["POST"])
 def run_prompt():
     try:
@@ -538,20 +575,31 @@ def run_prompt():
 
         def generate():
             import time
-            last_heartbeat = time.time()
 
-            with client.messages.stream(
-                model="claude-sonnet-4-6",
-                max_tokens=4000,
-                messages=[{"role":"user","content":prompt}]
-            ) as stream:
-                for text in stream.text_stream:
-                    yield f"data: {json.dumps({'text': text})}\n\n"
-                    # Send heartbeat every 10s to keep connection alive
-                    now = time.time()
-                    if now - last_heartbeat > 10:
-                        yield 'data: {"heartbeat": true}\n\n'
-                        last_heartbeat = now
+            # Get chunks (or just the original if no split needed)
+            chunks = get_prompt_chunks(prompt)
+            total  = len(chunks)
+
+            for i, chunk in enumerate(chunks):
+                # Send section header if multiple chunks
+                if total > 1:
+                    section_num = f"Part {i+1} of {total}"
+                    yield f"data: {json.dumps({'text': f'\n\n─── {section_num} ───\n\n'})}\n\n"
+
+                last_heartbeat = time.time()
+
+                with client.messages.stream(
+                    model="claude-sonnet-4-6",
+                    max_tokens=2000,
+                    messages=[{"role": "user", "content": chunk}]
+                ) as stream:
+                    for text in stream.text_stream:
+                        yield f"data: {json.dumps({'text': text})}\n\n"
+                        now = time.time()
+                        if now - last_heartbeat > 10:
+                            yield 'data: {"heartbeat": true}\n\n'
+                            last_heartbeat = now
+
             yield "data: [DONE]\n\n"
 
         return Response(
