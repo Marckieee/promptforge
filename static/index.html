@@ -312,9 +312,11 @@
           <span id="checkpoint-summary" style="font-size:11px;color:#5a5a6e;margin-left:4px;"></span>
         </div>
         <div id="checkpoint-text" style="font-size:13px;line-height:1.8;color:#c8c4b9;white-space:pre-wrap;word-break:break-word;"></div>
+        <div style="font-size:12px;color:#5a5a6e;margin-top:4px;">What would you like to do with this draft?</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn-primary" id="checkpoint-use-btn">✓ Use This Prompt</button>
-          <button class="btn-secondary" id="checkpoint-continue-btn">→ Keep Improving</button>
+          <button class="btn-primary" id="checkpoint-use-btn">✓ Use As Is</button>
+          <button class="btn-primary" id="checkpoint-improve-btn" style="background:#8b5cf6;">✦ Use &amp; Keep Improving</button>
+          <button class="btn-secondary" id="checkpoint-continue-btn">→ Continue Without Using</button>
         </div>
       </div>
       <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
@@ -1171,43 +1173,60 @@
       }, 2000);
     }
 
-    // Checkpoint buttons
-    checkpointUseBtn.addEventListener("click", () => {
+    const checkpointImproveBtn = document.getElementById("checkpoint-improve-btn");
+
+    function useCheckpointAsIs() {
       const prompt = checkpointText.textContent;
       checkpointCard.style.display = "none";
       inputArea.style.display = "none";
-      // Show as final prompt and run optimizer
       showFinal(prompt, []);
-      showOptimizerRunning();
+      // Run optimizer in background
       const optId = generateId() + "_opt";
-      const t = fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...apiHistory, { role: "user", content: "Please finalize and polish this prompt: " + prompt }],
-          promptId: optId,
-          questionCount: 0,
-        })
-      });
-      // Just run optimizer directly in background via task endpoint isn't available client-side
-      // So we poll for optimizer on the checkpoint text itself
-      const localOptId = generateId();
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: "Finalize this prompt — set stage to final immediately with this as finalPrompt: " + prompt }],
-          promptId: localOptId,
+          promptId: optId,
           questionCount: 0,
+          sessionId,
         })
       }).then(r => r.json()).then(result => {
         if (result.optimizerId) {
+          showOptimizerRunning();
           pollForTask(result.optimizerId, "optimizer", prompt);
         }
       }).catch(() => {});
       scrollBottom();
+    }
+
+    // ✓ Use As Is — take checkpoint as final, optimize in background
+    checkpointUseBtn.addEventListener("click", () => {
+      useCheckpointAsIs();
     });
 
+    // ✦ Use & Keep Improving — show checkpoint as final BUT keep input area open
+    checkpointImproveBtn.addEventListener("click", () => {
+      const prompt = checkpointText.textContent;
+      checkpointCard.style.display = "none";
+
+      // Show it in the final prompt box so they can see/copy it
+      showFinal(prompt, []);
+
+      // But also re-show the input area so they can continue refining
+      // Inject a message into history telling AI we have a draft and want to improve it
+      const improveMsg = `We have a good draft prompt so far: "${prompt.slice(0,200)}..." — please continue asking questions to refine and improve it further. Don't produce a final prompt yet.`;
+      apiHistory.push({ role: "user", content: improveMsg });
+
+      // Add a visual bubble showing the user chose to keep improving
+      addBubble("user", "✦ Using this draft — continuing to improve...", null, apiHistory.length - 1);
+
+      // Call AI to get next question
+      callAI();
+      scrollBottom();
+    });
+
+    // → Continue Without Using — just dismiss and keep going
     checkpointContBtn.addEventListener("click", () => {
       checkpointCard.style.display = "none";
       scrollBottom();
