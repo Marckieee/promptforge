@@ -201,7 +201,11 @@
       <div class="logo"><span>PROMPT</span><span>FORGE</span></div>
       <div class="logo-sub">AI-POWERED PROMPT ENGINEERING</div>
     </div>
-    <button class="btn-secondary" id="reset-btn" style="display:none">↩ NEW SESSION</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn-secondary" id="library-btn" style="font-size:11px;padding:8px 14px;">📚 Library</button>
+      <button class="btn-secondary" id="prefs-btn" style="font-size:11px;padding:8px 14px;">⚙ Preferences</button>
+      <button class="btn-secondary" id="reset-btn" style="display:none">↩ New Session</button>
+    </div>
   </header>
 
   <div id="progress-bar"><div id="progress-fill"></div></div>
@@ -234,6 +238,15 @@
         <div class="hint">Press the button below to start</div>
       </div>
 
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="input-label">OR START FROM A TEMPLATE</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="option-pill" onclick="document.getElementById('goal-input').value='Write a blog post about a topic I provide';document.getElementById('start-btn').disabled=false;">✍ Blog post</button>
+          <button class="option-pill" onclick="document.getElementById('goal-input').value='Build a customer support chatbot for my product';document.getElementById('start-btn').disabled=false;">💬 Chatbot</button>
+          <button class="option-pill" onclick="document.getElementById('goal-input').value='Analyse data and summarise key insights from a CSV file';document.getElementById('start-btn').disabled=false;">📊 Data analysis</button>
+          <button class="option-pill" onclick="document.getElementById('goal-input').value='Write cold outreach emails that get replies';document.getElementById('start-btn').disabled=false;">📧 Cold email</button>
+        </div>
+      </div>
       <button class="btn-primary" id="start-btn" disabled>Start Forging →</button>
 
       <div class="features">
@@ -292,6 +305,7 @@
         <div class="final-actions">
           <button class="btn-primary" id="run-btn">▶ Run Prompt</button>
           <button class="btn-primary" id="copy-btn">Copy Prompt</button>
+          <button class="btn-secondary" id="save-library-btn">📚 Save to Library</button>
           <button class="btn-secondary" id="reset-btn-2">Start Over</button>
         </div>
 
@@ -329,6 +343,110 @@
 
   </main>
 
+  <!-- PREFERENCES MODAL -->
+  <div id="prefs-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:#0d0d16;border:1px solid #2a2a35;padding:32px;width:90%;max-width:480px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:13px;color:#f59e0b;letter-spacing:0.1em;">⚙ PREFERENCES</div>
+        <button class="btn-secondary" id="prefs-close" style="padding:6px 12px;font-size:11px;">✕ Close</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">COMPLEXITY LEVEL</div>
+          <select id="pref-complexity" style="width:100%;background:#111118;border:1px solid #2a2a35;color:#e8e4d9;font-family:DM Mono,monospace;font-size:13px;padding:10px 12px;outline:none;">
+            <option value="auto">Auto (AI decides based on input)</option>
+            <option value="beginner">Beginner — simple language, basic structure</option>
+            <option value="intermediate">Intermediate — balanced depth</option>
+            <option value="advanced">Advanced — technical, detailed, precise</option>
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">TARGET AI</div>
+          <select id="pref-targetai" style="width:100%;background:#111118;border:1px solid #2a2a35;color:#e8e4d9;font-family:DM Mono,monospace;font-size:13px;padding:10px 12px;outline:none;">
+            <option value="general">General (works anywhere)</option>
+            <option value="Claude">Claude (Anthropic)</option>
+            <option value="ChatGPT">ChatGPT (OpenAI)</option>
+            <option value="Gemini">Gemini (Google)</option>
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">TONE</div>
+          <select id="pref-tone" style="width:100%;background:#111118;border:1px solid #2a2a35;color:#e8e4d9;font-family:DM Mono,monospace;font-size:13px;padding:10px 12px;outline:none;">
+            <option value="balanced">Balanced</option>
+            <option value="formal">Formal & professional</option>
+            <option value="casual">Casual & friendly</option>
+            <option value="direct">Direct & concise</option>
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">PROMPT VERBOSITY</div>
+          <select id="pref-verbosity" style="width:100%;background:#111118;border:1px solid #2a2a35;color:#e8e4d9;font-family:DM Mono,monospace;font-size:13px;padding:10px 12px;outline:none;">
+            <option value="standard">Standard</option>
+            <option value="concise">Concise — short and punchy</option>
+            <option value="detailed">Detailed — thorough and comprehensive</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" id="prefs-save">Save Preferences</button>
+      <div id="prefs-saved" style="display:none;font-size:11px;color:#10b981;text-align:center;letter-spacing:0.1em;">✓ SAVED</div>
+    </div>
+  </div>
+
+  <!-- LIBRARY PANEL -->
+  <div id="library-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-start;justify-content:flex-end;">
+    <div style="background:#0d0d16;border-left:1px solid #2a2a35;height:100%;width:90%;max-width:420px;display:flex;flex-direction:column;gap:0;overflow:hidden;">
+      <div style="padding:24px;border-bottom:1px solid #1a1a25;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="font-size:13px;color:#f59e0b;letter-spacing:0.1em;">📚 PROMPT LIBRARY</div>
+        <button class="btn-secondary" id="library-close" style="padding:6px 12px;font-size:11px;">✕ Close</button>
+      </div>
+      <div style="padding:16px 24px;border-bottom:1px solid #1a1a25;flex-shrink:0;">
+        <input type="text" id="library-search" placeholder="Search saved prompts..." style="width:100%;"/>
+      </div>
+      <div id="library-list" style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:12px;color:#3a3a50;text-align:center;padding:40px 0;">No saved prompts yet.<br>Complete a session to save your first prompt.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILL ASSESSMENT MODAL -->
+  <div id="skill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:#0d0d16;border:1px solid #f59e0b;padding:32px;width:90%;max-width:440px;display:flex;flex-direction:column;gap:20px;">
+      <div>
+        <div style="font-size:11px;color:#f59e0b;letter-spacing:0.2em;margin-bottom:8px;">QUICK SETUP — 30 SECONDS</div>
+        <div style="font-size:16px;color:#e8e4d9;font-weight:500;">Help us personalise PromptForge for you</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">HOW OFTEN DO YOU USE AI TOOLS?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="assess-q1">
+            <button class="option-pill assess-opt" data-q="1" data-v="beginner">Just starting out</button>
+            <button class="option-pill assess-opt" data-q="1" data-v="intermediate">A few times a week</button>
+            <button class="option-pill assess-opt" data-q="1" data-v="advanced">Daily power user</button>
+          </div>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">WHAT WILL YOU MAINLY USE THIS FOR?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="assess-q2">
+            <button class="option-pill assess-opt" data-q="2" data-v="casual">Personal projects</button>
+            <button class="option-pill assess-opt" data-q="2" data-v="formal">Work & business</button>
+            <button class="option-pill assess-opt" data-q="2" data-v="direct">Technical / coding</button>
+          </div>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">WHICH AI DO YOU USE MOST?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="assess-q3">
+            <button class="option-pill assess-opt" data-q="3" data-v="Claude">Claude</button>
+            <button class="option-pill assess-opt" data-q="3" data-v="ChatGPT">ChatGPT</button>
+            <button class="option-pill assess-opt" data-q="3" data-v="Gemini">Gemini</button>
+            <button class="option-pill assess-opt" data-q="3" data-v="general">Mixed / others</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" id="assess-save" disabled>Set My Preferences →</button>
+      <button class="btn-secondary" id="assess-skip" style="font-size:11px;padding:8px;">Skip for now</button>
+    </div>
+  </div>
+
   <script>
     const STAGES = {
       intake:  { label: "UNDERSTANDING GOAL", color: "#f59e0b" },
@@ -343,10 +461,108 @@
     let currentGoal = "";
     let promptId = "";
     let questionCount = 0;
+    let sessionId = localStorage.getItem("pf_session_id") || generateId();
+    localStorage.setItem("pf_session_id", sessionId);
 
     function generateId() {
       return Math.random().toString(36).slice(2) + Date.now().toString(36);
     }
+
+    // ── LIBRARY (Phase 3) ─────────────────────────────────────
+    const LIBRARY_KEY = "promptforge_library";
+
+    function loadLibrary() {
+      try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]"); } catch { return []; }
+    }
+
+    function saveToLibrary(prompt, goal) {
+      const lib = loadLibrary();
+      lib.unshift({ id: generateId(), prompt, goal, savedAt: Date.now() });
+      if (lib.length > 50) lib.pop();
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
+      renderLibrary();
+    }
+
+    function deleteFromLibrary(id) {
+      const lib = loadLibrary().filter(p => p.id !== id);
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
+      renderLibrary();
+    }
+
+    function renderLibrary(filter = "") {
+      const list = document.getElementById("library-list");
+      const lib  = loadLibrary().filter(p =>
+        !filter || p.goal.toLowerCase().includes(filter) || p.prompt.toLowerCase().includes(filter)
+      );
+      if (!lib.length) {
+        list.innerHTML = '<div style="font-size:12px;color:#3a3a50;text-align:center;padding:40px 0;">No saved prompts yet.<br>Complete a session to save your first prompt.</div>';
+        return;
+      }
+      list.innerHTML = "";
+      lib.forEach(item => {
+        const card = document.createElement("div");
+        card.style.cssText = "background:#111118;border:1px solid #1a1a25;padding:14px;display:flex;flex-direction:column;gap:8px;";
+        const date = new Date(item.savedAt).toLocaleDateString("en-SG", { day:"numeric", month:"short" });
+        card.innerHTML = `
+          <div style="font-size:11px;color:#3a3a50;display:flex;justify-content:space-between;">
+            <span>${date}</span>
+            <button onclick="deleteFromLibrary('${item.id}')" style="background:none;border:none;color:#3a3a50;cursor:pointer;font-size:11px;padding:0;">✕ Remove</button>
+          </div>
+          <div style="font-size:12px;color:#f59e0b;">${item.goal.slice(0,80)}${item.goal.length>80?"...":""}</div>
+          <div style="font-size:11px;color:#5a5a6e;line-height:1.6;">${item.prompt.slice(0,120)}...</div>
+          <div style="display:flex;gap:8px;">
+            <button class="option-pill" style="font-size:11px;" onclick="navigator.clipboard.writeText(${JSON.stringify(item.prompt)});this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',1500);">Copy</button>
+            <button class="option-pill" style="font-size:11px;" onclick="useLibraryPrompt(${JSON.stringify(item.prompt)});">Use This →</button>
+          </div>`;
+        list.appendChild(card);
+      });
+    }
+
+    function useLibraryPrompt(prompt) {
+      document.getElementById("library-panel").style.display = "none";
+      document.getElementById("final-prompt-text").textContent = prompt;
+      document.getElementById("landing").style.display = "none";
+      document.getElementById("chat").style.display = "flex";
+      document.getElementById("chat").style.flexDirection = "column";
+      document.getElementById("final-wrap").style.display = "flex";
+      document.getElementById("final-wrap").style.flexDirection = "column";
+      document.getElementById("progress-bar").style.display = "block";
+      document.getElementById("reset-btn").style.display = "block";
+    }
+    // ─────────────────────────────────────────────────────────
+
+    // ── PREFERENCES (Phase 2) ─────────────────────────────────
+    async function loadPreferences() {
+      try {
+        const res  = await fetch("/api/preferences?sessionId=" + sessionId);
+        const data = await res.json();
+        if (data.complexity)  document.getElementById("pref-complexity").value = data.complexity;
+        if (data.target_ai)   document.getElementById("pref-targetai").value   = data.target_ai;
+        if (data.tone)        document.getElementById("pref-tone").value        = data.tone;
+        if (data.verbosity)   document.getElementById("pref-verbosity").value   = data.verbosity;
+      } catch {}
+    }
+
+    async function savePreferences() {
+      const prefs = {
+        sessionId,
+        complexity: document.getElementById("pref-complexity").value,
+        targetAI:   document.getElementById("pref-targetai").value,
+        tone:       document.getElementById("pref-tone").value,
+        verbosity:  document.getElementById("pref-verbosity").value,
+      };
+      try {
+        await fetch("/api/preferences", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(prefs),
+        });
+        const saved = document.getElementById("prefs-saved");
+        saved.style.display = "block";
+        setTimeout(() => { saved.style.display = "none"; }, 2000);
+      } catch {}
+    }
+    // ─────────────────────────────────────────────────────────
 
     // ── AUTOSAVE ──────────────────────────────────────────────
     function saveSession(extra = {}) {
@@ -473,7 +689,7 @@
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiHistory, promptId, questionCount }),
+          body: JSON.stringify({ messages: apiHistory, promptId, questionCount, sessionId }),
         });
         const data = await res.json();
         if (data.error) { addBubble("ai", "Something went wrong. Please try again."); return; }
@@ -899,6 +1115,79 @@
     // ─────────────────────────────────────────────────────────
 
     [resetBtn, resetBtn2].forEach(btn => btn.addEventListener("click", resetSession));
+
+    // ── PREFERENCES MODAL ─────────────────────────────────────
+    document.getElementById("prefs-btn").addEventListener("click", () => {
+      loadPreferences();
+      document.getElementById("prefs-modal").style.display = "flex";
+    });
+    document.getElementById("prefs-close").addEventListener("click", () => {
+      document.getElementById("prefs-modal").style.display = "none";
+    });
+    document.getElementById("prefs-save").addEventListener("click", async () => {
+      await savePreferences();
+    });
+
+    // ── LIBRARY PANEL ─────────────────────────────────────────
+    document.getElementById("library-btn").addEventListener("click", () => {
+      renderLibrary();
+      document.getElementById("library-panel").style.display = "flex";
+    });
+    document.getElementById("library-close").addEventListener("click", () => {
+      document.getElementById("library-panel").style.display = "none";
+    });
+    document.getElementById("library-search").addEventListener("input", (e) => {
+      renderLibrary(e.target.value.toLowerCase());
+    });
+    document.getElementById("save-library-btn").addEventListener("click", () => {
+      const prompt = finalPrompt.textContent;
+      if (prompt) {
+        saveToLibrary(prompt, currentGoal);
+        const btn = document.getElementById("save-library-btn");
+        btn.textContent = "✓ Saved!";
+        setTimeout(() => { btn.textContent = "📚 Save to Library"; }, 2000);
+      }
+    });
+
+    // ── SKILL ASSESSMENT ──────────────────────────────────────
+    const assessAnswers = {};
+    document.querySelectorAll(".assess-opt").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const q = btn.dataset.q;
+        document.querySelectorAll(`.assess-opt[data-q="${q}"]`).forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        assessAnswers[q] = btn.dataset.v;
+        const saveBtn = document.getElementById("assess-save");
+        saveBtn.disabled = Object.keys(assessAnswers).length < 3;
+      });
+    });
+    document.getElementById("assess-save").addEventListener("click", async () => {
+      const prefs = {
+        sessionId,
+        complexity: assessAnswers["1"] || "auto",
+        targetAI:   assessAnswers["3"] || "general",
+        tone:       assessAnswers["2"] || "balanced",
+        verbosity:  "standard",
+      };
+      await fetch("/api/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+      document.getElementById("skill-modal").style.display = "none";
+      localStorage.setItem("pf_assessed", "1");
+    });
+    document.getElementById("assess-skip").addEventListener("click", () => {
+      document.getElementById("skill-modal").style.display = "none";
+      localStorage.setItem("pf_assessed", "1");
+    });
+
+    // Show assessment on first visit
+    if (!localStorage.getItem("pf_assessed")) {
+      setTimeout(() => {
+        document.getElementById("skill-modal").style.display = "flex";
+      }, 800);
+    }
 
     function resetSession() {
       clearSave();

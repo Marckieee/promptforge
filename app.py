@@ -1,6 +1,8 @@
 import os
 import json
 import threading
+import psycopg2
+import psycopg2.extras
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 import anthropic
 
@@ -8,11 +10,99 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "static"))
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-SYSTEM_PROMPT = """You are PromptForge, an expert AI prompt engineer and coach. Your job is to help users craft powerful, precise prompts through intelligent staged conversation.
+
+# ── DATABASE ─────────────────────────────────────────────────
+def get_db():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+
+def init_db():
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                session_id TEXT PRIMARY KEY,
+                complexity  TEXT DEFAULT 'auto',
+                target_ai   TEXT DEFAULT 'general',
+                tone        TEXT DEFAULT 'balanced',
+                verbosity   TEXT DEFAULT 'standard',
+                updated_at  TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"DB init error: {e}")
+
+try:
+    init_db()
+except Exception:
+    pass
+
+
+def get_prefs(session_id: str) -> dict:
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM user_preferences WHERE session_id = %s", (session_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return dict(row) if row else {}
+    except Exception:
+        return {}
+
+def save_prefs(session_id: str, prefs: dict):
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO user_preferences (session_id, complexity, target_ai, tone, verbosity, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (session_id) DO UPDATE SET
+                complexity = EXCLUDED.complexity,
+                target_ai  = EXCLUDED.target_ai,
+                tone       = EXCLUDED.tone,
+                verbosity  = EXCLUDED.verbosity,
+                updated_at = NOW()
+        """, (
+            session_id,
+            prefs.get("complexity", "auto"),
+            prefs.get("targetAI", "general"),
+            prefs.get("tone", "balanced"),
+            prefs.get("verbosity", "standard"),
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Save prefs error: {e}")
+
+
+# ── SYSTEM PROMPTS ────────────────────────────────────────────
+def build_system_prompt(prefs: dict) -> str:
+    complexity = prefs.get("complexity", "auto")
+    target_ai  = prefs.get("target_ai", "general")
+    tone       = prefs.get("tone", "balanced")
+    verbosity  = prefs.get("verbosity", "standard")
+
+    prefs_block = ""
+    if complexity != "auto" or target_ai != "general" or tone != "balanced" or verbosity != "standard":
+        prefs_block = f"""
+## User preferences (apply these to every response)
+- Complexity level: {complexity} — calibrate question depth and final prompt structure accordingly
+- Target AI: {target_ai} — optimise the final prompt's syntax and structure for this AI
+- Tone: {tone} — match this tone in your messages and in the final prompt
+- Verbosity: {verbosity} — {"keep final prompts concise and to the point" if verbosity == "concise" else "produce detailed, thorough final prompts"}
+"""
+
+    return f"""You are PromptForge, an expert AI prompt engineer and coach. Your job is to help users craft powerful, precise prompts through intelligent staged conversation.
 
 You are speaking to a mixed audience — complete beginners through experienced prompt engineers. Adapt your vocabulary, question depth, and final prompt complexity to match how detailed and technical the user's initial input is. Short, vague inputs = simpler questions and accessible language. Long, detailed inputs = technical questions and structured output.
-
+{prefs_block}
 When a user describes what they want to achieve, you will:
 1. ANALYZE their goal and decide the best approach (wizard steps, clarifying questions, or iterative refinement)
 2. GUIDE them stage by stage — never overwhelm with too many questions at once
@@ -31,7 +121,7 @@ Bad question: "What do you want the AI to do?" (restates the obvious)
 Use this style: specific, one decision at a time, never open-ended to the point of confusion.
 
 Your response must ALWAYS be valid JSON in this exact shape:
-{
+{{
   "stage": "intake" | "clarify" | "refine" | "final",
   "message": "Your conversational message to the user",
   "question": "A single focused question to ask (omit if stage is final)",
@@ -41,7 +131,7 @@ Your response must ALWAYS be valid JSON in this exact shape:
   "inputType": "text" | "choice" | "none",
   "finalPrompt": "The complete, ready-to-use prompt (only include when stage is final)",
   "progress": 0-100
-}
+}}
 
 Rules:
 - Ask ONE question at a time max
@@ -97,8 +187,8 @@ Respond ONLY with a JSON object in this exact shape:
 No preamble, no explanation outside the JSON."""
 
 
+# ── BACKGROUND HELPERS ────────────────────────────────────────
 def build_checkpoint(messages: list) -> dict:
-    """Generate a checkpoint draft prompt from the conversation so far."""
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
@@ -108,30 +198,24 @@ def build_checkpoint(messages: list) -> dict:
         )
         text = response.content[0].text
         clean = text.replace("```json", "").replace("```", "").strip()
-        start = clean.find("{")
-        end = clean.rfind("}") + 1
+        start = clean.find("{"); end = clean.rfind("}") + 1
         if start != -1 and end > start:
             clean = clean[start:end]
         return json.loads(clean)
     except Exception:
         return {}
 
-
 def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
-    """Run the completeness optimizer on a draft prompt."""
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4000,
             system=OPTIMIZER_PROMPT,
-            messages=[
-                {"role": "user", "content": f"Analyze and improve this prompt:\n\n{raw_prompt}"}
-            ],
+            messages=[{"role": "user", "content": f"Analyze and improve this prompt:\n\n{raw_prompt}"}],
         )
         text = response.content[0].text
         clean = text.replace("```json", "").replace("```", "").strip()
-        start = clean.find("{")
-        end = clean.rfind("}") + 1
+        start = clean.find("{"); end = clean.rfind("}") + 1
         if start != -1 and end > start:
             clean = clean[start:end]
         result = json.loads(clean)
@@ -144,67 +228,80 @@ def optimize_prompt(raw_prompt: str) -> tuple[str, list]:
         return raw_prompt, []
 
 
-@app.route("/")
-def index():
-    return send_from_directory(app.static_folder, "index.html")
-
-
-# Shared cache for background tasks
+# ── TASK CACHE ────────────────────────────────────────────────
 task_cache = {}
-task_lock = threading.Lock()
-
+task_lock  = threading.Lock()
 
 def run_task_async(task_id: str, fn, *args):
-    """Run any function in background and cache result."""
     result = fn(*args)
     with task_lock:
         task_cache[task_id] = result
 
 
+# ── ROUTES ────────────────────────────────────────────────────
+@app.route("/")
+def index():
+    return send_from_directory(app.static_folder, "index.html")
+
+
+# Phase 2 — Preferences
+@app.route("/api/preferences", methods=["GET"])
+def get_preferences():
+    session_id = request.args.get("sessionId", "default")
+    prefs = get_prefs(session_id)
+    return jsonify(prefs)
+
+@app.route("/api/preferences", methods=["POST"])
+def save_preferences():
+    data = request.get_json()
+    session_id = data.get("sessionId", "default")
+    save_prefs(session_id, data)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
-        data = request.get_json()
-        messages = data.get("messages", [])
-        prompt_id = data.get("promptId", "")
-        question_count = data.get("questionCount", 0)
+        data          = request.get_json()
+        messages      = data.get("messages", [])
+        prompt_id     = data.get("promptId", "")
+        question_count= data.get("questionCount", 0)
+        session_id    = data.get("sessionId", "default")
+
+        # Load user prefs and build personalised system prompt
+        prefs       = get_prefs(session_id)
+        system      = build_system_prompt(prefs)
 
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            system=SYSTEM_PROMPT,
+            system=system,
             messages=messages,
         )
 
-        text = response.content[0].text
+        text  = response.content[0].text
         clean = text.replace("```json", "").replace("```", "").strip()
-        parsed = json.loads(clean)
+        parsed= json.loads(clean)
 
-        # Every 2 questions — trigger a background checkpoint
+        # Every 2 questions — background checkpoint
         if (parsed.get("stage") != "final" and
                 question_count > 0 and
                 question_count % 2 == 0 and
                 prompt_id):
-            checkpoint_id = f"{prompt_id}_cp_{question_count}"
-            t = threading.Thread(
-                target=run_task_async,
-                args=(checkpoint_id, build_checkpoint, messages),
-                daemon=True,
-            )
-            t.start()
-            parsed["checkpointId"] = checkpoint_id
+            cp_id = f"{prompt_id}_cp_{question_count}"
+            threading.Thread(target=run_task_async, args=(cp_id, build_checkpoint, messages), daemon=True).start()
+            parsed["checkpointId"] = cp_id
 
-        # Final prompt — run optimizer in background
+        # Final prompt — background optimizer
         if parsed.get("stage") == "final" and parsed.get("finalPrompt") and prompt_id:
             parsed["optimizing"] = True
-            optimizer_id = f"{prompt_id}_opt"
-            t = threading.Thread(
+            opt_id = f"{prompt_id}_opt"
+            threading.Thread(
                 target=run_task_async,
-                args=(optimizer_id, lambda p: {"improved": optimize_prompt(p)[0], "changes": optimize_prompt(p)[1]}, parsed["finalPrompt"]),
-                daemon=True,
-            )
-            t.start()
-            parsed["optimizerId"] = optimizer_id
+                args=(opt_id, lambda p: {"improved": optimize_prompt(p)[0], "changes": optimize_prompt(p)[1]}, parsed["finalPrompt"]),
+                daemon=True
+            ).start()
+            parsed["optimizerId"] = opt_id
 
         return jsonify(parsed)
 
@@ -216,7 +313,6 @@ def chat():
 
 @app.route("/api/task-result", methods=["GET"])
 def task_result():
-    """Poll for any background task result."""
     task_id = request.args.get("taskId", "")
     with task_lock:
         result = task_cache.pop(task_id, None)
@@ -228,7 +324,7 @@ def task_result():
 @app.route("/api/run", methods=["POST"])
 def run_prompt():
     try:
-        data = request.get_json()
+        data   = request.get_json()
         prompt = data.get("prompt", "")
 
         def generate():
@@ -244,12 +340,8 @@ def run_prompt():
         return Response(
             stream_with_context(generate()),
             mimetype="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-            }
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
         )
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
