@@ -1076,10 +1076,10 @@
     }
 
     const runBtn      = document.getElementById("run-btn");
-    const runSections     = document.getElementById("run-sections");
-    const followupWrap    = document.getElementById("followup-wrap");
-    const followupInput   = document.getElementById("followup-input");
-    const followupSendBtn = document.getElementById("followup-send-btn");
+    const runSections     = document.getElementById("run-sections") || { innerHTML: "", children: [], querySelectorAll: ()=>[] };
+    const followupWrap    = document.getElementById("followup-wrap") || { style: {}, parentElement: null };
+    const followupInput   = document.getElementById("followup-input") || { value: "", focus: ()=>{} };
+    const followupSendBtn = document.getElementById("followup-send-btn") || { addEventListener: ()=>{}, disabled: false };
     const runWrap     = document.getElementById("run-wrap");
     const runResult   = document.getElementById("run-result");
     const runLoading  = document.getElementById("run-loading");
@@ -1316,8 +1316,8 @@
       }
     }
 
-    followupSendBtn.addEventListener("click", sendFollowup);
-    followupInput.addEventListener("keydown", (e) => {
+    if (followupSendBtn) followupSendBtn.addEventListener("click", sendFollowup);
+    if (followupInput) followupInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendFollowup(); }
     });
     // ─────────────────────────────────────────────────────────
