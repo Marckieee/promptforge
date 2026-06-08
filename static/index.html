@@ -332,7 +332,7 @@
       <button class="btn-secondary" id="reset-btn" style="display:none;font-size:12px;padding:7px 14px;">↩ New</button>
       <button class="btn-secondary" id="library-btn" style="font-size:12px;padding:7px 14px;">📚 Library</button>
       <button class="btn-secondary" id="prefs-btn" style="font-size:12px;padding:7px 14px;">⚙ Prefs</button>
-      <a href="/auth/google" id="login-btn" class="btn-secondary" style="font-size:12px;padding:7px 14px;text-decoration:none;display:none;">🔑 Sign in</a>
+      <a href="/auth/google" id="login-btn" class="btn-secondary" style="font-size:12px;padding:7px 14px;text-decoration:none;">🔑 Sign in</a>
       <div id="user-menu" style="display:none;align-items:center;gap:6px;">
         <img id="user-avatar" src="" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);" />
         <span id="user-name" style="font-size:12px;color:var(--text-muted);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
@@ -1703,7 +1703,7 @@
       document.getElementById("team-panel").style.display = "flex";
     });
 
-    loadMe().then(() => applyResponsiveNav());
+    loadMe();
 
     // Team panel
     document.getElementById("team-btn").addEventListener("click", () => {
