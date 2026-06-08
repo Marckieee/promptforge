@@ -484,7 +484,6 @@
           <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:DM Mono,monospace; font-size:11px; padding:4px 12px; cursor:pointer; letter-spacing:0.08em;">■ Stop</button>
           <div id="run-error-msg" style="display:none; font-size:11px; color:#f87171; margin-left:4px;"></div>
         </div>
-        <div id="run-result" style="background:var(--surface2);border:1px solid #3b82f6;padding:24px;font-size:13px;line-height:1.8;color:#c8d8f0;white-space:pre-wrap;word-break:break-word;min-height:60px;"></div>
         <div id="run-retry-wrap" style="display:none; gap:10px; align-items:center;">
           <button class="btn-primary" id="retry-btn" style="background:#f59e0b;">↺ Retry</button>
           <span style="font-size:11px; color:#5a5a6e;">Response may have been cut off</span>
@@ -1077,6 +1076,10 @@
     }
 
     const runBtn      = document.getElementById("run-btn");
+    const runSections     = document.getElementById("run-sections");
+    const followupWrap    = document.getElementById("followup-wrap");
+    const followupInput   = document.getElementById("followup-input");
+    const followupSendBtn = document.getElementById("followup-send-btn");
     const runWrap     = document.getElementById("run-wrap");
     const runResult   = document.getElementById("run-result");
     const runLoading  = document.getElementById("run-loading");
