@@ -1044,6 +1044,8 @@
 
     function showFinal(prompt, changes) {
       inputArea.style.display = "none";
+      // Hide checkpoint card when final is ready — it's superseded
+      if (checkpointCard) checkpointCard.style.display = "none";
       finalWrap.style.display = "flex";
       finalWrap.style.flexDirection = "column";
       finalPrompt.textContent = prompt;
