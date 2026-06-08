@@ -332,7 +332,7 @@
       <button class="btn-secondary" id="reset-btn" style="display:none;font-size:12px;padding:7px 14px;">↩ New</button>
       <button class="btn-secondary" id="library-btn" style="font-size:12px;padding:7px 14px;">📚 Library</button>
       <button class="btn-secondary" id="prefs-btn" style="font-size:12px;padding:7px 14px;">⚙ Prefs</button>
-      <a href="/auth/google" id="login-btn" class="btn-secondary" style="font-size:12px;padding:7px 14px;text-decoration:none;">🔑 Sign in</a>
+      <button id="login-btn" class="btn-secondary" style="font-size:12px;padding:7px 14px;" onclick="window.location.href='/auth/google'">🔑 Sign in</button>
       <div id="user-menu" style="display:none;align-items:center;gap:6px;">
         <img id="user-avatar" src="" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);" />
         <span id="user-name" style="font-size:12px;color:var(--text-muted);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
@@ -353,7 +353,7 @@
     <button class="btn-secondary" id="reset-btn-mobile" style="display:none;font-size:13px;padding:11px 16px;text-align:left;width:100%;">↩ New Session</button>
     <!-- Auth area -->
     <div id="mobile-auth-area" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
-      <a href="/auth/google" id="mobile-login-btn" class="btn-primary" style="font-size:13px;padding:11px 16px;text-decoration:none;display:none;width:100%;box-sizing:border-box;text-align:center;">🔑 Sign in with Google</a>
+      <button id="mobile-login-btn" class="btn-primary" style="font-size:13px;padding:11px 16px;display:none;width:100%;box-sizing:border-box;text-align:center;" onclick="window.location.href='/auth/google'">🔑 Sign in with Google</button>
       <div id="mobile-user-menu" style="display:none;flex-direction:column;gap:8px;">
         <div style="display:flex;align-items:center;gap:12px;padding:8px 4px;">
           <img id="mobile-user-avatar" src="" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--border2);" />
