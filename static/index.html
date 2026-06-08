@@ -1630,18 +1630,22 @@
 
     // ── RESPONSIVE NAV ───────────────────────────────────────
     function applyResponsiveNav() {
-      const isMobile = window.innerWidth <= 700;
+      const isMobile = window.innerWidth < 700;
       const desktopNav = document.getElementById("desktop-nav");
       const mobileBtn  = document.getElementById("mobile-menu-btn");
-      if (desktopNav) desktopNav.style.display = isMobile ? "none" : "flex";
-      if (mobileBtn)  mobileBtn.style.display  = isMobile ? "flex" : "none";
-      // Close mobile menu if switching to desktop
+      if (desktopNav) {
+        desktopNav.style.display = isMobile ? "none" : "flex";
+        desktopNav.style.visibility = "visible";
+      }
+      if (mobileBtn) mobileBtn.style.display = isMobile ? "flex" : "none";
       if (!isMobile) {
         const mobileMenu = document.getElementById("mobile-menu");
         if (mobileMenu) mobileMenu.style.display = "none";
       }
     }
+    // Run immediately and after full load to be safe
     applyResponsiveNav();
+    window.addEventListener("load", applyResponsiveNav);
     window.addEventListener("resize", applyResponsiveNav);
     // ─────────────────────────────────────────────────────────
 
@@ -1699,7 +1703,7 @@
       document.getElementById("team-panel").style.display = "flex";
     });
 
-    loadMe();
+    loadMe().then(() => applyResponsiveNav());
 
     // Team panel
     document.getElementById("team-btn").addEventListener("click", () => {
