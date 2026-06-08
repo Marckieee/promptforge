@@ -1538,6 +1538,23 @@
     // Check on load
     checkForSavedSession();
 
+    // ── RESPONSIVE NAV ───────────────────────────────────────
+    function applyResponsiveNav() {
+      const isMobile = window.innerWidth <= 700;
+      const desktopNav = document.getElementById("desktop-nav");
+      const mobileBtn  = document.getElementById("mobile-menu-btn");
+      if (desktopNav) desktopNav.style.display = isMobile ? "none" : "flex";
+      if (mobileBtn)  mobileBtn.style.display  = isMobile ? "flex" : "none";
+      // Close mobile menu if switching to desktop
+      if (!isMobile) {
+        const mobileMenu = document.getElementById("mobile-menu");
+        if (mobileMenu) mobileMenu.style.display = "none";
+      }
+    }
+    applyResponsiveNav();
+    window.addEventListener("resize", applyResponsiveNav);
+    // ─────────────────────────────────────────────────────────
+
     // ── AUTH & TEAM (Phase 3) ─────────────────────────────────
     let currentUser = null;
     let currentTeamId = null;
