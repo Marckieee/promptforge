@@ -881,12 +881,19 @@ def stream_openrouter(prompt: str, model: str):
     with urllib.request.urlopen(req, timeout=120) as resp:
         for line in resp:
             line = line.decode("utf-8").strip()
-            if line.startswith("data:") and line != "data: [DONE]":
+            if not line or line == "data: [DONE]":
+                continue
+            if line.startswith("data:"):
                 try:
                     data = json.loads(line[5:].strip())
-                    delta = data["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        yield delta
+                    choices = data.get("choices", [])
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    # Handle both content and reasoning_content (DeepSeek R1)
+                    text = delta.get("content") or delta.get("reasoning_content") or ""
+                    if text:
+                        yield text
                 except Exception:
                     continue
 
