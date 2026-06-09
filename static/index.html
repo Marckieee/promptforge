@@ -1514,15 +1514,16 @@
                 }
                 if (parsed.error) { showError(parsed.error); continue; }
                 if (parsed.text) {
-                  // Detect section headers to update status label
                   if (parsed.text.includes("─── Part")) {
                     const match = parsed.text.match(/Part (\d+) of (\d+)/);
-                    if (match) {
-                      runStatusLabel.textContent = `GENERATING PART ${match[1]} OF ${match[2]}`;
-                    }
+                    const label = match ? `Part ${match[1]} of ${match[2]}` : "Continued";
+                    runStatusLabel.textContent = label.toUpperCase();
+                    startNewSection(label);
+                  } else {
+                    appendToSection(parsed.text);
                   }
-                  runResult.textContent += parsed.text;
-                  resetTimeout(() => { controller.abort(); }); // reset on each chunk
+                  resetTimeout(() => { controller.abort(); });
+                  scrollBottom();
                   scrollBottom();
                 }
               } catch {}
