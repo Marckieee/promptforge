@@ -1647,6 +1647,77 @@
       }, 800);
     }
 
+    // ── SIDEBAR ───────────────────────────────────────────────
+    const sidebarEmpty       = document.getElementById("sidebar-empty");
+    const sidebarCheckpoints = document.getElementById("sidebar-checkpoints");
+    const sidebarFinal       = document.getElementById("sidebar-final");
+    const sidebarFinalText   = document.getElementById("sidebar-final-text");
+    const sidebarOptimizer   = document.getElementById("sidebar-optimizer");
+
+    function showSidebar() {
+      if (sidebarEmpty) sidebarEmpty.style.display = "none";
+    }
+
+    function addCheckpointToSidebar(prompt, summary) {
+      if (!sidebarCheckpoints) return;
+      showSidebar();
+      const card = document.createElement("div");
+      card.className = "sidebar-card";
+      const num = sidebarCheckpoints.children.length + 1;
+      const sumEl = summary ? `<span style="font-size:11px;color:var(--text-dark);margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${summary}</span>` : "";
+      card.innerHTML = `
+        <div class="sidebar-card-header">
+          <div class="sidebar-card-dot" style="background:var(--amber);"></div>
+          <span class="sidebar-card-label" style="color:var(--amber);">Draft ${num}</span>
+          ${sumEl}
+        </div>
+        <div class="sidebar-card-body" style="max-height:160px;overflow-y:auto;font-size:13px;color:var(--text-muted);white-space:pre-wrap;word-break:break-word;">${prompt}</div>
+        <div class="sidebar-card-actions">
+          <button class="btn-primary" style="font-size:12px;padding:8px 14px;">✓ Use</button>
+          <button class="btn-secondary" style="font-size:12px;padding:8px 14px;">Copy</button>
+        </div>`;
+      // Wire up buttons properly
+      const useBtn  = card.querySelectorAll("button")[0];
+      const copyBtn = card.querySelectorAll("button")[1];
+      useBtn.addEventListener("click",  () => { showSidebarFinal(prompt); showFinal(prompt, []); useBtn.textContent = "✓ Using"; });
+      copyBtn.addEventListener("click", () => { navigator.clipboard.writeText(prompt); copyBtn.textContent = "✓ Copied!"; setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500); });
+      sidebarCheckpoints.appendChild(card);
+    }
+
+    function showSidebarFinal(prompt) {
+      if (!sidebarFinal || !sidebarFinalText) return;
+      showSidebar();
+      sidebarFinal.style.display = "block";
+      sidebarFinalText.textContent = prompt;
+      if (sidebarOptimizer) { sidebarOptimizer.style.display = "none"; sidebarOptimizer.innerHTML = ""; }
+    }
+
+    // Sidebar action buttons
+    const sidebarCopyBtn = document.getElementById("sidebar-copy-btn");
+    const sidebarRunBtn  = document.getElementById("sidebar-run-btn");
+    const sidebarSaveBtn = document.getElementById("sidebar-save-btn");
+
+    if (sidebarCopyBtn) sidebarCopyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(sidebarFinalText.textContent);
+      sidebarCopyBtn.textContent = "✓ Copied!";
+      setTimeout(() => { sidebarCopyBtn.textContent = "Copy"; }, 1500);
+    });
+    if (sidebarRunBtn) sidebarRunBtn.addEventListener("click", () => {
+      finalPrompt.textContent = sidebarFinalText.textContent;
+      finalWrap.style.display = "flex";
+      finalWrap.style.flexDirection = "column";
+      executeRun();
+    });
+    if (sidebarSaveBtn) sidebarSaveBtn.addEventListener("click", async () => {
+      const prompt = sidebarFinalText.textContent;
+      if (prompt) {
+        await saveToLibrary(prompt, currentGoal);
+        sidebarSaveBtn.textContent = "✓ Saved!";
+        setTimeout(() => { sidebarSaveBtn.textContent = "📚 Save"; }, 2000);
+      }
+    });
+    // ─────────────────────────────────────────────────────────
+
     function resetSession() {
       clearSave();
       if (sidebarCheckpoints) sidebarCheckpoints.innerHTML = "";
