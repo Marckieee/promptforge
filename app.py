@@ -772,26 +772,34 @@ Respond ONLY with a JSON object:
 
 
 def route_prompt(prompt: str) -> dict:
-    """Determine the best AI model for a given prompt."""
-    try:
-        response = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=200,
-            system=ROUTER_PROMPT,
-            messages=[{"role": "user", "content": f"Route this prompt:\n\n{prompt}"}],
-        )
-        text = response.content[0].text.strip()
-        clean = text.replace("```json", "").replace("```", "").strip()
-        start = clean.find("{"); end = clean.rfind("}") + 1
-        result = json.loads(clean[start:end])
-        model_id = result.get("model", "claude")
-        return {
-            "model": model_id,
-            "reason": result.get("reason", ""),
-            **AI_MODELS.get(model_id, AI_MODELS["claude"])
-        }
-    except Exception:
-        return {"model": "claude", "reason": "Default model", **AI_MODELS["claude"]}
+    """Determine the best AI model for a given prompt using keyword matching (fast, no API call)."""
+    prompt_lower = prompt.lower()
+
+    # Keyword-based routing — instant, no API needed
+    if any(w in prompt_lower for w in ["code", "python", "javascript", "debug", "function", "programming", "script", "api", "sql", "error", "fix", "bug"]):
+        model_id = "llama"
+    elif any(w in prompt_lower for w in ["math", "calculate", "equation", "logic", "proof", "solve", "reasoning", "step by step", "analysis"]):
+        model_id = "deepseek"
+    elif any(w in prompt_lower for w in ["travel", "itinerary", "research", "facts", "history", "science", "explain", "what is", "how does", "guide"]):
+        model_id = "gemini"
+    elif any(w in prompt_lower for w in ["write", "email", "business", "report", "summarise", "summarize", "essay", "blog", "content", "copy"]):
+        model_id = "qwen"
+    else:
+        model_id = "claude"
+
+    reasons = {
+        "llama": "Prompt involves coding or technical tasks — Llama excels here",
+        "deepseek": "Prompt requires logical reasoning or analysis — DeepSeek is optimised for this",
+        "gemini": "Prompt involves research, travel or factual content — Gemini is best for this",
+        "qwen": "Prompt involves writing or business content — Qwen handles this well",
+        "claude": "General or creative task — Claude is the best fit",
+    }
+
+    return {
+        "model": model_id,
+        "reason": reasons[model_id],
+        **AI_MODELS[model_id]
+    }
 
 
 def stream_gemini(prompt: str):
