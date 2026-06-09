@@ -119,9 +119,6 @@
     #right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
 
     @media (max-width: 700px) {
-      #right-col { display: none !important; }
-      #workspace-drawer-btn { display: flex !important; }
-      #checkpoint-card { display: none !important; }
       #session-layout {
         flex-direction: column !important;
         gap: 16px !important;
@@ -579,6 +576,28 @@
 
       <!-- RUN RESULT PANEL -->
       <div id="run-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:8px; animation: fadeIn 0.4s ease;">
+        <!-- Model selector -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">RUN WITH:</span>
+          <select id="model-selector" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
+            <option value="auto">✦ Auto (best model)</option>
+            <option value="claude">🟠 Claude Sonnet</option>
+            <option value="gemini">🔵 Gemini 1.5 Flash</option>
+            <option value="llama">🟣 Llama 3.3 70B</option>
+            <option value="deepseek">🟡 DeepSeek R1</option>
+            <option value="qwen">🟢 Qwen 2.5 72B</option>
+          </select>
+        </div>
+        <!-- Routing result -->
+        <div id="routing-card" style="display:none;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:8px;animation:fadeIn 0.3s ease;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="routing-icon" style="font-size:18px;"></span>
+            <div>
+              <div id="routing-model-name" style="font-size:13px;font-weight:700;color:var(--text);"></div>
+              <div id="routing-reason" style="font-size:12px;color:var(--text-muted);margin-top:2px;"></div>
+            </div>
+          </div>
+        </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <div id="run-status-dot" style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
           <span id="run-status-label" style="font-size:11px;color:#3b82f6;letter-spacing:0.15em;">AI RESPONSE</span>
@@ -587,7 +606,7 @@
             <div class="dot" style="width:5px;height:5px;animation-delay:0.2s;"></div>
             <div class="dot" style="width:5px;height:5px;animation-delay:0.4s;"></div>
           </div>
-          <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:DM Mono,monospace; font-size:11px; padding:4px 12px; cursor:pointer; letter-spacing:0.08em;">■ Stop</button>
+          <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:'Cabinet Grotesk',sans-serif; font-size:11px; padding:4px 12px; cursor:pointer; border-radius:4px;">■ Stop</button>
           <div id="run-error-msg" style="display:none; font-size:11px; color:#f87171; margin-left:4px;"></div>
         </div>
         <div id="run-retry-wrap" style="display:none; gap:10px; align-items:center;">
@@ -1994,6 +2013,7 @@
       if (document.getElementById("stop-btn")) document.getElementById("stop-btn").style.display = "none";
       if (runSections) runSections.innerHTML = "";
       if (followupWrap) followupWrap.style.display = "none";
+      const rc = document.getElementById("routing-card"); if (rc) rc.style.display = "none";
       if (optimizerWrap) optimizerWrap.style.display = "none";
       if (optimizerChanges) optimizerChanges.innerHTML = "";
       if (checkpointCard) checkpointCard.style.display = "none";

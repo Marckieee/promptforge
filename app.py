@@ -707,3 +707,234 @@ def run_prompt():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+
+# ── AI ROUTER ─────────────────────────────────────────────────
+import urllib.request
+
+GEMINI_API_KEY    = os.environ.get("GEMINI_API_KEY")
+GROQ_API_KEY      = os.environ.get("GROQ_API_KEY")
+OPENROUTER_API_KEY= os.environ.get("OPENROUTER_API_KEY")
+
+# Model definitions
+AI_MODELS = {
+    "claude": {
+        "name": "Claude Sonnet",
+        "provider": "Anthropic",
+        "icon": "🟠",
+        "strengths": ["creative writing", "complex reasoning", "nuanced analysis", "coding", "general tasks"],
+        "description": "Best for creative, complex reasoning and nuanced tasks"
+    },
+    "gemini": {
+        "name": "Gemini 1.5 Flash",
+        "provider": "Google",
+        "icon": "🔵",
+        "strengths": ["research", "factual questions", "travel", "science", "current events", "summarisation"],
+        "description": "Best for research, factual queries and travel planning"
+    },
+    "llama": {
+        "name": "Llama 3.3 70B",
+        "provider": "Groq",
+        "icon": "🟣",
+        "strengths": ["coding", "technical", "programming", "debugging", "fast responses"],
+        "description": "Best for coding, technical tasks and fast responses"
+    },
+    "deepseek": {
+        "name": "DeepSeek R1",
+        "provider": "OpenRouter",
+        "icon": "🟡",
+        "strengths": ["math", "logic", "reasoning", "problem solving", "analysis"],
+        "description": "Best for math, logical reasoning and structured problem solving"
+    },
+    "qwen": {
+        "name": "Qwen 2.5 72B",
+        "provider": "OpenRouter",
+        "icon": "🟢",
+        "strengths": ["writing", "business", "multilingual", "summarisation", "general"],
+        "description": "Best for writing, business tasks and multilingual content"
+    },
+}
+
+ROUTER_PROMPT = """You are an AI model router. Given a prompt, decide which AI model would produce the best result.
+
+Available models:
+- claude: Creative writing, complex reasoning, nuanced analysis, general tasks
+- gemini: Research, factual questions, travel planning, science, summarisation
+- llama: Coding, technical tasks, programming, debugging, fast responses
+- deepseek: Math, logic, reasoning, structured problem solving, analysis
+- qwen: Writing, business tasks, multilingual content, summarisation
+
+Respond ONLY with a JSON object:
+{
+  "model": "claude" | "gemini" | "llama" | "deepseek" | "qwen",
+  "reason": "One sentence explaining why this model fits the prompt best"
+}"""
+
+
+def route_prompt(prompt: str) -> dict:
+    """Determine the best AI model for a given prompt."""
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=200,
+            system=ROUTER_PROMPT,
+            messages=[{"role": "user", "content": f"Route this prompt:\n\n{prompt}"}],
+        )
+        text = response.content[0].text.strip()
+        clean = text.replace("```json", "").replace("```", "").strip()
+        start = clean.find("{"); end = clean.rfind("}") + 1
+        result = json.loads(clean[start:end])
+        model_id = result.get("model", "claude")
+        return {
+            "model": model_id,
+            "reason": result.get("reason", ""),
+            **AI_MODELS.get(model_id, AI_MODELS["claude"])
+        }
+    except Exception:
+        return {"model": "claude", "reason": "Default model", **AI_MODELS["claude"]}
+
+
+def stream_gemini(prompt: str):
+    """Stream response from Gemini 1.5 Flash."""
+    import urllib.request, urllib.error
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={GEMINI_API_KEY}&alt=sse"
+    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode()
+    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if line.startswith("data:"):
+                try:
+                    data = json.loads(line[5:].strip())
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    yield text
+                except Exception:
+                    continue
+
+
+def stream_groq(prompt: str):
+    """Stream response from Llama via Groq."""
+    import urllib.request
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    body = json.dumps({
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": 4000,
+    }).encode()
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+    }, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if line.startswith("data:") and line != "data: [DONE]":
+                try:
+                    data = json.loads(line[5:].strip())
+                    delta = data["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield delta
+                except Exception:
+                    continue
+
+
+def stream_openrouter(prompt: str, model: str):
+    """Stream response from OpenRouter (DeepSeek or Qwen)."""
+    import urllib.request
+    model_map = {
+        "deepseek": "deepseek/deepseek-r1:free",
+        "qwen": "qwen/qwen-2.5-72b-instruct:free",
+    }
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    body = json.dumps({
+        "model": model_map.get(model, "qwen/qwen-2.5-72b-instruct:free"),
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": 4000,
+    }).encode()
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "https://promptforgebuild.up.railway.app",
+        "X-Title": "PromptForge",
+    }, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if line.startswith("data:") and line != "data: [DONE]":
+                try:
+                    data = json.loads(line[5:].strip())
+                    delta = data["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield delta
+                except Exception:
+                    continue
+
+
+@app.route("/api/route", methods=["POST"])
+def route_and_run():
+    """Route a prompt to the best AI and stream the response."""
+    try:
+        data   = request.get_json()
+        prompt = data.get("prompt", "")
+        force_model = data.get("model", None)  # allow user override
+
+        # Route the prompt
+        if force_model and force_model in AI_MODELS:
+            routing = {"model": force_model, "reason": "User selected", **AI_MODELS[force_model]}
+        else:
+            routing = route_prompt(prompt)
+
+        model = routing["model"]
+
+        def generate():
+            import time
+            # Send routing info first
+            yield f"data: {json.dumps({'routing': routing})}\n\n"
+
+            last_heartbeat = time.time()
+
+            try:
+                if model == "gemini" and GEMINI_API_KEY:
+                    streamer = stream_gemini(prompt)
+                elif model == "llama" and GROQ_API_KEY:
+                    streamer = stream_groq(prompt)
+                elif model in ("deepseek", "qwen") and OPENROUTER_API_KEY:
+                    streamer = stream_openrouter(prompt, model)
+                else:
+                    # Fallback to Claude
+                    with client.messages.stream(
+                        model="claude-sonnet-4-6",
+                        max_tokens=4000,
+                        messages=[{"role": "user", "content": prompt}]
+                    ) as stream:
+                        for text in stream.text_stream:
+                            yield f"data: {json.dumps({'text': text})}\n\n"
+                            now = time.time()
+                            if now - last_heartbeat > 10:
+                                yield 'data: {"heartbeat": true}\n\n'
+                                last_heartbeat = now
+                    yield "data: [DONE]\n\n"
+                    return
+
+                for text in streamer:
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+                    now = time.time()
+                    if now - last_heartbeat > 10:
+                        yield 'data: {"heartbeat": true}\n\n'
+                        last_heartbeat = now
+
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
