@@ -740,14 +740,14 @@ AI_MODELS = {
         "description": "Best for coding, technical tasks and fast responses"
     },
     "deepseek": {
-        "name": "DeepSeek R1 0528",
+        "name": "DeepSeek R1",
         "provider": "OpenRouter",
         "icon": "🟡",
         "strengths": ["math", "logic", "reasoning", "problem solving", "analysis"],
         "description": "Best for math, logical reasoning and structured problem solving"
     },
     "qwen": {
-        "name": "Qwen3 14B",
+        "name": "Qwen3 Coder",
         "provider": "OpenRouter",
         "icon": "🟢",
         "strengths": ["writing", "business", "multilingual", "summarisation", "general"],
@@ -862,8 +862,8 @@ def stream_openrouter(prompt: str, model: str):
     """Stream response from OpenRouter (DeepSeek or Qwen)."""
     import urllib.request
     model_map = {
-        "deepseek": "deepseek/deepseek-r1-0528:free",
-        "qwen": "qwen/qwen3-14b:free",
+        "deepseek": "deepseek/deepseek-r1:free",
+        "qwen": "qwen/qwen3-coder:free",
     }
     url = "https://openrouter.ai/api/v1/chat/completions"
     body = json.dumps({
