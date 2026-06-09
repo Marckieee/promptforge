@@ -1458,6 +1458,11 @@
               const cp = data.result;
               if (cp && cp.checkpointPrompt) {
                 addCheckpointToSidebar(cp.checkpointPrompt, cp.summary || "");
+                // Save checkpoint to session so it can be restored on resume
+                const savedSession = loadSave() || {};
+                const checkpoints  = savedSession.checkpoints || [];
+                checkpoints.push({ prompt: cp.checkpointPrompt, summary: cp.summary || "" });
+                saveSession({ checkpoints });
               }
             }
 
@@ -1788,6 +1793,11 @@
 
       // Restore chat bubbles
       if (session.bubbles) restoreBubbles(session.bubbles);
+
+      // Restore sidebar checkpoints
+      if (session.checkpoints && session.checkpoints.length) {
+        session.checkpoints.forEach(cp => addCheckpointToSidebar(cp.prompt, cp.summary));
+      }
 
       // Restore last stage UI
       const last = session.lastResult;
