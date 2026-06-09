@@ -1458,11 +1458,14 @@
               const cp = data.result;
               if (cp && cp.checkpointPrompt) {
                 addCheckpointToSidebar(cp.checkpointPrompt, cp.summary || "");
-                // Save checkpoint to session so it can be restored on resume
-                const savedSession = loadSave() || {};
-                const checkpoints  = savedSession.checkpoints || [];
+                // Merge checkpoint into existing session data
+                const existingSession = loadSave() || {};
+                const checkpoints = existingSession.checkpoints || [];
                 checkpoints.push({ prompt: cp.checkpointPrompt, summary: cp.summary || "" });
-                saveSession({ checkpoints });
+                try {
+                  const merged = { ...existingSession, checkpoints, savedAt: Date.now() };
+                  localStorage.setItem(SAVE_KEY, JSON.stringify(merged));
+                } catch(e) {}
               }
             }
 
