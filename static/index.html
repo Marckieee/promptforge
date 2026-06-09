@@ -1390,6 +1390,50 @@
 
     const TIMEOUT_MS = 30000; // 30s without new text = stalled
 
+
+    let currentSection = null;
+    let currentSectionText = "";
+    let sectionCount = 0;
+
+    function createSection(label) {
+      sectionCount++;
+      const lbl = label || (sectionCount === 1 ? "Response" : "Part " + sectionCount);
+      const section = document.createElement("div");
+      section.style.cssText = "background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.15);border-radius:16px;overflow:hidden;margin-bottom:4px;";
+      const hdr = document.createElement("div");
+      hdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(96,165,250,0.04);";
+      const lbEl = document.createElement("span");
+      lbEl.style.cssText = "font-size:11px;color:#60a5fa;font-family:monospace;letter-spacing:0.08em;";
+      lbEl.textContent = lbl.toUpperCase();
+      const cpBtn = document.createElement("button");
+      cpBtn.style.cssText = "background:none;border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:#60a5fa;font-size:11px;padding:4px 10px;cursor:pointer;";
+      cpBtn.textContent = "Copy";
+      cpBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(section.dataset.raw || "");
+        cpBtn.textContent = "✓"; setTimeout(() => cpBtn.textContent = "Copy", 1500);
+      });
+      hdr.appendChild(lbEl); hdr.appendChild(cpBtn);
+      const body = document.createElement("div");
+      body.style.cssText = "padding:20px 24px;font-size:14px;line-height:1.85;color:#dbeafe;word-break:break-word;";
+      section.appendChild(hdr); section.appendChild(body);
+      section.dataset.raw = "";
+      const rs = document.getElementById("run-sections");
+      if (rs) rs.appendChild(section);
+      return { section, body };
+    }
+
+    function appendToSection(text) {
+      if (!currentSection) { currentSection = createSection("Response"); currentSectionText = ""; }
+      currentSectionText += text;
+      currentSection.section.dataset.raw = currentSectionText;
+      try { currentSection.body.innerHTML = marked.parse(currentSectionText); }
+      catch(e) { currentSection.body.textContent = currentSectionText; }
+    }
+
+    function startNewSection(label) {
+      currentSectionText = ""; currentSection = createSection(label);
+    }
+
     async function executeRun() {
       const prompt = finalPrompt.textContent;
       runWrap.style.display = "flex";
@@ -1419,10 +1463,10 @@
 
       try {
         const controller = new AbortController();
-        const response = await fetch("/api/run", {
+        const response = await fetch("/api/route", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, model: (document.getElementById("model-selector")||{}).value === "auto" ? null : (document.getElementById("model-selector")||{}).value }),
           signal: controller.signal,
         });
 
@@ -1452,7 +1496,21 @@
               }
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.heartbeat) continue; // keep-alive, ignore
+                if (parsed.heartbeat) continue;
+                if (parsed.routing) {
+                  const rc = parsed.routing;
+                  const card = document.getElementById("routing-card");
+                  if (card) {
+                    const el = document.getElementById("routing-icon"); if(el) el.textContent = rc.icon||"✦";
+                    const nm = document.getElementById("routing-model-name"); if(nm) nm.textContent = rc.name+" ("+rc.provider+")";
+                    const rs = document.getElementById("routing-reason"); if(rs) rs.textContent = rc.reason;
+                    card.style.display = "block";
+                  }
+                  runStatusLabel.textContent = "GENERATING...";
+                  if (runLoading) runLoading.style.display = "none";
+                  continue;
+                }
+                if (parsed.error) { showError(parsed.error); continue; }
                 if (parsed.text) {
                   // Detect section headers to update status label
                   if (parsed.text.includes("─── Part")) {
