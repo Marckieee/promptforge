@@ -1678,17 +1678,14 @@
       // Wire up buttons properly
       const useBtn  = card.querySelectorAll("button")[0];
       const copyBtn = card.querySelectorAll("button")[1];
-      useBtn.addEventListener("click",  () => { showSidebarFinal(prompt); showFinal(prompt, []); useBtn.textContent = "✓ Using"; });
+      useBtn.addEventListener("click",  () => { showFinal(prompt, []); useBtn.textContent = "✓ Using"; });
       copyBtn.addEventListener("click", () => { navigator.clipboard.writeText(prompt); copyBtn.textContent = "✓ Copied!"; setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500); });
       sidebarCheckpoints.appendChild(card);
     }
 
     function showSidebarFinal(prompt) {
-      if (!sidebarFinal || !sidebarFinalText) return;
-      showSidebar();
-      sidebarFinal.style.display = "block";
-      sidebarFinalText.textContent = prompt;
-      if (sidebarOptimizer) { sidebarOptimizer.style.display = "none"; sidebarOptimizer.innerHTML = ""; }
+      // Final prompt intentionally not shown in sidebar
+      return;
     }
 
     // Sidebar action buttons
