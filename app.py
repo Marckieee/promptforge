@@ -726,7 +726,7 @@ AI_MODELS = {
         "description": "Best for creative, complex reasoning and nuanced tasks"
     },
     "gemini": {
-        "name": "Gemini 1.5 Flash",
+        "name": "Gemini 2.0 Flash",
         "provider": "Google",
         "icon": "🔵",
         "strengths": ["research", "factual questions", "travel", "science", "current events", "summarisation"],
@@ -805,7 +805,7 @@ def route_prompt(prompt: str) -> dict:
 def stream_gemini(prompt: str):
     """Stream response from Gemini 1.5 Flash."""
     import urllib.request, urllib.error
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={GEMINI_API_KEY}&alt=sse"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
     body = json.dumps({"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 4000}}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=120) as resp:
