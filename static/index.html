@@ -592,7 +592,7 @@
             <div>Checkpoint drafts and your final prompt will appear here as we build.</div>
           </div>
           <div id="sidebar-checkpoints" style="display:flex;flex-direction:column;gap:12px;"></div>
-          <div id="sidebar-final" style="display:none;" class="sidebar-card">
+          <div id="sidebar-final" style="display:none !important;" class="sidebar-card">
             <div class="sidebar-card-header">
               <div class="sidebar-card-dot" style="background:var(--green);box-shadow:0 0 8px var(--green);"></div>
               <span class="sidebar-card-label" style="color:var(--green);">Forged Prompt</span>
@@ -1138,8 +1138,7 @@
       finalWrap.style.display = "flex";
       finalWrap.style.flexDirection = "column";
       finalPrompt.textContent = prompt;
-      // Also populate sidebar final prompt
-      showSidebarFinal(prompt);
+
 
       // Show optimizer changes if any
       optimizerChanges.innerHTML = "";
