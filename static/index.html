@@ -984,7 +984,7 @@
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(session));
         flashSaveIndicator();
-      } catch (e) {}
+      } catch (e) { console.error("saveSession error:", e); }
     }
 
     function clearSave() {
