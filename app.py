@@ -719,7 +719,7 @@ OPENROUTER_API_KEY= os.environ.get("OPENROUTER_API_KEY")
 # Model definitions
 AI_MODELS = {
     "claude": {
-        "name": "Claude Sonnet",
+        "name": "Claude Sonnet 4.6",
         "provider": "Anthropic",
         "icon": "🟠",
         "strengths": ["creative writing", "complex reasoning", "nuanced analysis", "coding", "general tasks"],
@@ -740,14 +740,14 @@ AI_MODELS = {
         "description": "Best for coding, technical tasks and fast responses"
     },
     "deepseek": {
-        "name": "DeepSeek R1",
+        "name": "DeepSeek R1 0528",
         "provider": "OpenRouter",
         "icon": "🟡",
         "strengths": ["math", "logic", "reasoning", "problem solving", "analysis"],
         "description": "Best for math, logical reasoning and structured problem solving"
     },
     "qwen": {
-        "name": "Qwen 3 14B",
+        "name": "Qwen3 235B",
         "provider": "OpenRouter",
         "icon": "🟢",
         "strengths": ["writing", "business", "multilingual", "summarisation", "general"],
@@ -863,7 +863,7 @@ def stream_openrouter(prompt: str, model: str):
     import urllib.request
     model_map = {
         "deepseek": "deepseek/deepseek-r1-0528:free",
-        "qwen": "qwen/qwen3-14b:free",
+        "qwen": "qwen/qwen3-235b-a22b:free",
     }
     url = "https://openrouter.ai/api/v1/chat/completions"
     body = json.dumps({
@@ -929,20 +929,28 @@ def route_and_run():
                 elif model in ("deepseek", "qwen") and OPENROUTER_API_KEY:
                     streamer = stream_openrouter(prompt, model)
                 else:
-                    # Fallback to Claude
-                    with client.messages.stream(
-                        model="claude-sonnet-4-6",
-                        max_tokens=4000,
-                        messages=[{"role": "user", "content": prompt}]
-                    ) as stream:
-                        for text in stream.text_stream:
-                            yield f"data: {json.dumps({'text': text})}\n\n"
-                            now = time.time()
-                            if now - last_heartbeat > 10:
-                                yield 'data: {"heartbeat": true}\n\n'
-                                last_heartbeat = now
-                    yield "data: [DONE]\n\n"
-                    return
+                    # Claude — with fallback to Llama if credits unavailable
+                    try:
+                        with client.messages.stream(
+                            model="claude-sonnet-4-6",
+                            max_tokens=4000,
+                            messages=[{"role": "user", "content": prompt}]
+                        ) as stream:
+                            for text in stream.text_stream:
+                                yield f"data: {json.dumps({'text': text})}\n\n"
+                                now = time.time()
+                                if now - last_heartbeat > 10:
+                                    yield 'data: {"heartbeat": true}\n\n'
+                                    last_heartbeat = now
+                        yield "data: [DONE]\n\n"
+                        return
+                    except Exception as claude_err:
+                        # Fallback to Llama via Groq if Claude fails
+                        if GROQ_API_KEY:
+                            yield f"data: {json.dumps({'text': '\n[Claude unavailable — switching to Llama]\n\n'})}\n\n"
+                            streamer = stream_groq(prompt)
+                        else:
+                            raise claude_err
 
                 for text in streamer:
                     yield f"data: {json.dumps({'text': text})}\n\n"
