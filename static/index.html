@@ -1388,7 +1388,7 @@
     const runRetryWrap   = document.getElementById("run-retry-wrap");
     const retryBtn       = document.getElementById("retry-btn");
 
-    const TIMEOUT_MS = 30000; // 30s without new text = stalled
+    const TIMEOUT_MS = 60000; // 60s without new text = stalled
 
 
     let currentSection = null;
@@ -1508,6 +1508,8 @@
                   }
                   runStatusLabel.textContent = "GENERATING...";
                   if (runLoading) runLoading.style.display = "none";
+                  // Reset timeout — we have a live connection
+                  resetTimeout(() => { controller.abort(); });
                   continue;
                 }
                 if (parsed.error) { showError(parsed.error); continue; }
