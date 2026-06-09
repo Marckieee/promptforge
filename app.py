@@ -106,13 +106,19 @@ def init_db():
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS personal_prompts (
-                id          SERIAL PRIMARY KEY,
-                user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                goal        TEXT,
-                prompt      TEXT NOT NULL,
-                title       TEXT,
-                created_at  TIMESTAMP DEFAULT NOW()
+                id           SERIAL PRIMARY KEY,
+                user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                goal         TEXT,
+                prompt       TEXT NOT NULL,
+                title        TEXT,
+                session_data TEXT,
+                created_at   TIMESTAMP DEFAULT NOW()
             )
+        """)
+        # Add session_data column if it doesn't exist (for existing tables)
+        cur.execute("""
+            ALTER TABLE personal_prompts
+            ADD COLUMN IF NOT EXISTS session_data TEXT
         """)
 
         conn.commit()
@@ -512,7 +518,7 @@ def get_library():
     try:
         conn = get_db()
         cur  = conn.cursor()
-        cur.execute("SELECT * FROM personal_prompts WHERE user_id = %s ORDER BY created_at DESC", (user["id"],))
+        cur.execute("SELECT id, goal, prompt, title, session_data, created_at FROM personal_prompts WHERE user_id = %s ORDER BY created_at DESC", (user["id"],))
         prompts = [dict(r) for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify(prompts)
@@ -529,9 +535,9 @@ def save_library():
         conn = get_db()
         cur  = conn.cursor()
         cur.execute("""
-            INSERT INTO personal_prompts (user_id, goal, prompt, title)
-            VALUES (%s, %s, %s, %s) RETURNING id
-        """, (user["id"], data.get("goal",""), data.get("prompt",""), data.get("title","")))
+            INSERT INTO personal_prompts (user_id, goal, prompt, title, session_data)
+            VALUES (%s, %s, %s, %s, %s) RETURNING id
+        """, (user["id"], data.get("goal",""), data.get("prompt",""), data.get("title",""), data.get("sessionData","")))
         pid = cur.fetchone()["id"]
         conn.commit(); cur.close(); conn.close()
         return jsonify({"ok": True, "id": pid})

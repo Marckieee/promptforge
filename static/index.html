@@ -797,12 +797,28 @@
     }
 
     async function saveToLibrary(prompt, goal) {
+      // Capture full session snapshot
+      const sessionSnapshot = JSON.stringify({
+        goal,
+        prompt,
+        apiHistory,
+        bubbles: getBubbleData(),
+        checkpoints: (loadSave() || {}).checkpoints || [],
+        lastResult: { stage: "final", finalPrompt: prompt, progress: 100 },
+        lastStage: "final",
+      });
+
       if (currentUser) {
         try {
           await fetch("/api/library", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, goal, title: (goal||"").slice(0,60) })
+            body: JSON.stringify({
+              prompt,
+              goal,
+              title: (goal||"").slice(0,60),
+              sessionData: sessionSnapshot,
+            })
           });
           await renderLibrary();
           return;
@@ -810,7 +826,7 @@
       }
       // Fallback: localStorage
       const lib = loadLocalLibrary();
-      lib.unshift({ id: generateId(), prompt, goal, savedAt: Date.now() });
+      lib.unshift({ id: generateId(), prompt, goal, savedAt: Date.now(), sessionData: sessionSnapshot });
       if (lib.length > 50) lib.pop();
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
       await renderLibrary();
@@ -870,7 +886,7 @@
       useBtn.className = "btn-primary";
       useBtn.style.cssText = "font-size:12px;padding:8px 16px;";
       useBtn.textContent = "Use This →";
-      useBtn.addEventListener("click", () => useLibraryPrompt(item.prompt));
+      useBtn.addEventListener("click", () => useLibraryPrompt(item.prompt, item.sessionData || null));
 
       btnRow.appendChild(copyBtn);
       btnRow.appendChild(useBtn);
@@ -898,6 +914,7 @@
               prompt: p.prompt,
               goal: p.goal || "",
               savedAt: new Date(p.created_at).getTime(),
+              sessionData: p.session_data || null,
             }));
             isRemote = true;
           }
@@ -923,8 +940,21 @@
       items.forEach(item => list.appendChild(buildLibraryCard(item, isRemote)));
     }
 
-    function useLibraryPrompt(prompt) {
+    function useLibraryPrompt(prompt, sessionDataStr) {
       document.getElementById("library-panel").style.display = "none";
+
+      // If we have full session data, restore it completely
+      if (sessionDataStr) {
+        try {
+          const session = typeof sessionDataStr === "string" ? JSON.parse(sessionDataStr) : sessionDataStr;
+          if (session && session.apiHistory) {
+            resumeSession(session);
+            return;
+          }
+        } catch(e) {}
+      }
+
+      // Fallback: just show the prompt
       document.getElementById("final-prompt-text").textContent = prompt;
       document.getElementById("landing").style.display = "none";
       document.getElementById("chat").style.display = "flex";
