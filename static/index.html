@@ -1053,11 +1053,11 @@
           pollForTask(result.optimizerId, "optimizer", result.finalPrompt);
         }
       } else {
-        if (result.question) questionCount++;
         // Trigger checkpoint poll if backend started one
         if (result.checkpointId) {
           pollForTask(result.checkpointId, "checkpoint", null);
         }
+        if (result.question) questionCount++;
         showInputArea(result);
       }
 

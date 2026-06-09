@@ -590,7 +590,7 @@ def chat():
             text = text[start:end]
         parsed = json.loads(text)
 
-        if parsed.get("stage") != "final" and question_count > 0 and question_count % 2 == 0 and prompt_id:
+        if parsed.get("stage") != "final" and question_count > 0 and question_count % 2 == 1 and prompt_id:
             cp_id = f"{prompt_id}_cp_{question_count}"
             threading.Thread(target=run_task_async, args=(cp_id, build_checkpoint, messages), daemon=True).start()
             parsed["checkpointId"] = cp_id
