@@ -810,33 +810,98 @@
       renderLibrary();
     }
 
-    function renderLibrary(filter = "") {
+    function buildLibraryCard(item, isRemote) {
+      const card = document.createElement("div");
+      card.style.cssText = "background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:8px;";
+      const date = new Date(item.savedAt).toLocaleDateString("en-SG", { day:"numeric", month:"short" });
+
+      const dateRow = document.createElement("div");
+      dateRow.style.cssText = "font-size:11px;color:var(--text-dark);display:flex;justify-content:space-between;align-items:center;";
+      const dateSpan = document.createElement("span");
+      dateSpan.textContent = date + (isRemote ? " · ☁" : " · local");
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "✕ Remove";
+      removeBtn.style.cssText = "background:none;border:none;color:var(--text-dark);cursor:pointer;font-size:11px;padding:0;";
+      removeBtn.addEventListener("click", () => deleteFromLibrary(item.id, isRemote));
+      dateRow.appendChild(dateSpan);
+      dateRow.appendChild(removeBtn);
+
+      const goalDiv = document.createElement("div");
+      goalDiv.style.cssText = "font-size:13px;color:var(--amber);font-weight:600;";
+      goalDiv.textContent = (item.goal||"").slice(0,80) + ((item.goal||"").length > 80 ? "..." : "");
+
+      const previewDiv = document.createElement("div");
+      previewDiv.style.cssText = "font-size:12px;color:var(--text-dim);line-height:1.6;";
+      previewDiv.textContent = (item.prompt||"").slice(0,120) + "...";
+
+      const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;gap:8px;";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "option-pill";
+      copyBtn.style.fontSize = "12px";
+      copyBtn.textContent = "Copy";
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(item.prompt);
+        copyBtn.textContent = "✓ Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      });
+
+      const useBtn = document.createElement("button");
+      useBtn.className = "btn-primary";
+      useBtn.style.cssText = "font-size:12px;padding:8px 16px;";
+      useBtn.textContent = "Use This →";
+      useBtn.addEventListener("click", () => useLibraryPrompt(item.prompt));
+
+      btnRow.appendChild(copyBtn);
+      btnRow.appendChild(useBtn);
+      card.appendChild(dateRow);
+      card.appendChild(goalDiv);
+      card.appendChild(previewDiv);
+      card.appendChild(btnRow);
+      return card;
+    }
+
+    async function renderLibrary(filter = "") {
       const list = document.getElementById("library-list");
-      const lib  = loadLibrary().filter(p =>
-        !filter || p.goal.toLowerCase().includes(filter) || p.prompt.toLowerCase().includes(filter)
-      );
-      if (!lib.length) {
-        list.innerHTML = '<div style="font-size:12px;color:#3a3a50;text-align:center;padding:40px 0;">No saved prompts yet.<br>Complete a session to save your first prompt.</div>';
+      list.innerHTML = '<div style="font-size:12px;color:var(--text-dark);text-align:center;padding:20px 0;">Loading...</div>';
+
+      let items = [];
+      let isRemote = false;
+
+      if (currentUser) {
+        try {
+          const res = await fetch("/api/library");
+          if (res.ok) {
+            const data = await res.json();
+            items = data.map(p => ({
+              id: p.id,
+              prompt: p.prompt,
+              goal: p.goal || "",
+              savedAt: new Date(p.created_at).getTime(),
+            }));
+            isRemote = true;
+          }
+        } catch {}
+      }
+
+      if (!isRemote) {
+        items = loadLocalLibrary();
+      }
+
+      if (filter) {
+        items = items.filter(p =>
+          (p.goal||"").toLowerCase().includes(filter) ||
+          (p.prompt||"").toLowerCase().includes(filter)
+        );
+      }
+
+      list.innerHTML = "";
+      if (!items.length) {
+        list.innerHTML = '<div style="font-size:12px;color:var(--text-dark);text-align:center;padding:40px 0;">No saved prompts yet.<br>Complete a session to save your first prompt.</div>';
         return;
       }
-      list.innerHTML = "";
-      lib.forEach(item => {
-        const card = document.createElement("div");
-        card.style.cssText = "background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:8px;";
-        const date = new Date(item.savedAt).toLocaleDateString("en-SG", { day:"numeric", month:"short" });
-        card.innerHTML = `
-          <div style="font-size:11px;color:#3a3a50;display:flex;justify-content:space-between;">
-            <span>${date}</span>
-            <button onclick="deleteFromLibrary('${item.id}')" style="background:none;border:none;color:#3a3a50;cursor:pointer;font-size:11px;padding:0;">✕ Remove</button>
-          </div>
-          <div style="font-size:12px;color:#f59e0b;">${item.goal.slice(0,80)}${item.goal.length>80?"...":""}</div>
-          <div style="font-size:11px;color:#5a5a6e;line-height:1.6;">${item.prompt.slice(0,120)}...</div>
-          <div style="display:flex;gap:8px;">
-            <button class="option-pill" style="font-size:11px;" onclick="navigator.clipboard.writeText(${JSON.stringify(item.prompt)});this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',1500);">Copy</button>
-            <button class="option-pill" style="font-size:11px;" onclick="useLibraryPrompt(${JSON.stringify(item.prompt)});">Use This →</button>
-          </div>`;
-        list.appendChild(card);
-      });
+      items.forEach(item => list.appendChild(buildLibraryCard(item, isRemote)));
     }
 
     function useLibraryPrompt(prompt) {
