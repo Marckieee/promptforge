@@ -785,6 +785,13 @@
     let sessionId = localStorage.getItem("pf_session_id") || generateId();
     localStorage.setItem("pf_session_id", sessionId);
 
+    // Sidebar elements — declared early so resumeSession can use them
+    const sidebarEmpty       = document.getElementById("sidebar-empty");
+    const sidebarCheckpoints = document.getElementById("sidebar-checkpoints");
+    const sidebarFinal       = document.getElementById("sidebar-final");
+    const sidebarFinalText   = document.getElementById("sidebar-final-text");
+    const sidebarOptimizer   = document.getElementById("sidebar-optimizer");
+
     function generateId() {
       return Math.random().toString(36).slice(2) + Date.now().toString(36);
     }
@@ -1771,12 +1778,7 @@
       }, 800);
     }
 
-    // ── SIDEBAR ───────────────────────────────────────────────
-    const sidebarEmpty       = document.getElementById("sidebar-empty");
-    const sidebarCheckpoints = document.getElementById("sidebar-checkpoints");
-    const sidebarFinal       = document.getElementById("sidebar-final");
-    const sidebarFinalText   = document.getElementById("sidebar-final-text");
-    const sidebarOptimizer   = document.getElementById("sidebar-optimizer");
+    // ── SIDEBAR (declarations moved to top) ─────────────────
 
     function showSidebar() {
       if (sidebarEmpty) sidebarEmpty.style.display = "none";
