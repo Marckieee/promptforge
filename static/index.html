@@ -98,12 +98,14 @@
     #left-col {
       flex: 1;
       min-width: 0;
+      max-width: 100%;
       display: flex;
       flex-direction: column;
       gap: 14px;
+      overflow: hidden;
     }
     #right-col {
-      width: 340px;
+      width: 320px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
@@ -115,6 +117,23 @@
     }
     #right-col::-webkit-scrollbar { width: 3px; }
     #right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+    @media (max-width: 700px) {
+      #session-layout {
+        flex-direction: column !important;
+        gap: 16px !important;
+      }
+      #left-col {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      #right-col {
+        width: 100% !important;
+        position: static !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+      }
+    }
 
     /* SIDEBAR CARDS */
     .sidebar-card {
