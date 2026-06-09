@@ -776,13 +776,13 @@ def route_prompt(prompt: str) -> dict:
     prompt_lower = prompt.lower()
 
     # Keyword-based routing — instant, no API needed
-    if any(w in prompt_lower for w in ["code", "python", "javascript", "debug", "function", "programming", "script", "api", "sql", "error", "fix", "bug"]):
+    if any(w in prompt_lower for w in ["code", "python", "javascript", "debug", "function", "programming", "script", "sql", "error", "fix", "bug", "algorithm", "class", "variable"]):
         model_id = "llama"
-    elif any(w in prompt_lower for w in ["math", "calculate", "equation", "logic", "proof", "solve", "reasoning", "step by step", "analysis"]):
+    elif any(w in prompt_lower for w in ["math", "calculate", "equation", "proof", "theorem", "integral", "derivative", "statistics", "probability"]):
         model_id = "deepseek"
-    elif any(w in prompt_lower for w in ["travel", "itinerary", "research", "facts", "history", "science", "explain", "what is", "how does", "guide"]):
+    elif any(w in prompt_lower for w in ["travel", "itinerary", "restaurant", "hotel", "flight", "research", "facts", "history", "science", "geography", "country", "city", "visit", "tour"]):
         model_id = "gemini"
-    elif any(w in prompt_lower for w in ["write", "email", "business", "report", "summarise", "summarize", "essay", "blog", "content", "copy"]):
+    elif any(w in prompt_lower for w in ["write", "email", "business", "report", "summarise", "summarize", "essay", "blog", "content", "copy", "marketing", "proposal"]):
         model_id = "qwen"
     else:
         model_id = "claude"
@@ -862,7 +862,7 @@ def stream_openrouter(prompt: str, model: str):
     """Stream response from OpenRouter (DeepSeek or Qwen)."""
     import urllib.request
     model_map = {
-        "deepseek": "deepseek/deepseek-r1:free",
+        "deepseek": "deepseek/deepseek-r1-0528:free",
         "qwen": "qwen/qwen3-14b:free",
     }
     url = "https://openrouter.ai/api/v1/chat/completions"
