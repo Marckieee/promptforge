@@ -747,7 +747,7 @@ AI_MODELS = {
         "description": "Best for math, logical reasoning and structured problem solving"
     },
     "qwen": {
-        "name": "Qwen 2.5 72B",
+        "name": "Qwen 3 14B",
         "provider": "OpenRouter",
         "icon": "🟢",
         "strengths": ["writing", "business", "multilingual", "summarisation", "general"],
@@ -863,7 +863,7 @@ def stream_openrouter(prompt: str, model: str):
     import urllib.request
     model_map = {
         "deepseek": "deepseek/deepseek-r1:free",
-        "qwen": "qwen/qwen-2.5-72b-instruct:free",
+        "qwen": "qwen/qwen3-14b:free",
     }
     url = "https://openrouter.ai/api/v1/chat/completions"
     body = json.dumps({
