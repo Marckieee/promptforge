@@ -792,22 +792,41 @@
     // ── LIBRARY (Phase 3) ─────────────────────────────────────
     const LIBRARY_KEY = "promptforge_library";
 
-    function loadLibrary() {
+    function loadLocalLibrary() {
       try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]"); } catch { return []; }
     }
 
-    function saveToLibrary(prompt, goal) {
-      const lib = loadLibrary();
+    async function saveToLibrary(prompt, goal) {
+      if (currentUser) {
+        try {
+          await fetch("/api/library", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, goal, title: (goal||"").slice(0,60) })
+          });
+          await renderLibrary();
+          return;
+        } catch {}
+      }
+      // Fallback: localStorage
+      const lib = loadLocalLibrary();
       lib.unshift({ id: generateId(), prompt, goal, savedAt: Date.now() });
       if (lib.length > 50) lib.pop();
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
-      renderLibrary();
+      await renderLibrary();
     }
 
-    function deleteFromLibrary(id) {
-      const lib = loadLibrary().filter(p => p.id !== id);
+    async function deleteFromLibrary(id, isRemote) {
+      if (isRemote && currentUser) {
+        try {
+          await fetch(`/api/library/${id}`, { method: "DELETE" });
+          await renderLibrary();
+          return;
+        } catch {}
+      }
+      const lib = loadLocalLibrary().filter(p => p.id !== id);
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
-      renderLibrary();
+      await renderLibrary();
     }
 
     function buildLibraryCard(item, isRemote) {
