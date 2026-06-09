@@ -454,6 +454,28 @@
     <span id="stage-progress"></span>
   </div>
 
+  <!-- MOBILE WORKSPACE DRAWER -->
+  <div id="workspace-drawer-btn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:80;background:var(--amber);color:#0c0c14;border:none;border-radius:40px;padding:10px 18px;font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 20px rgba(240,165,0,0.4);align-items:center;gap:8px;" onclick="toggleWorkspaceDrawer()">
+    ✦ <span id="drawer-btn-label">Drafts</span> <span id="drawer-draft-count" style="background:rgba(0,0,0,0.2);border-radius:20px;padding:2px 8px;font-size:11px;">0</span>
+  </div>
+
+  <div id="workspace-drawer" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(14,14,22,0.98);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:0;max-height:70vh;overflow-y:auto;backdrop-filter:blur(20px);transition:transform 0.3s ease;">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(14,14,22,0.98);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--amber);"></div>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">Prompt Workspace</span>
+      </div>
+      <button onclick="toggleWorkspaceDrawer()" style="background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text-muted);font-size:13px;padding:4px 12px;cursor:pointer;">✕ Close</button>
+    </div>
+    <div id="drawer-content" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div id="drawer-empty" style="text-align:center;padding:32px 0;color:var(--text-dark);font-size:13px;">
+        <div style="font-size:24px;margin-bottom:8px;opacity:0.4;">✦</div>
+        Checkpoint drafts will appear here as we build.
+      </div>
+      <div id="drawer-checkpoints" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+  </div>
+
   <!-- RESUME BANNER -->
   <div id="resume-banner" style="display:none; background:rgba(240,165,0,0.08); border-bottom:1px solid rgba(240,165,0,0.25); padding:12px 28px; align-items:center; gap:12px; flex-wrap:wrap; position:sticky; top:60px; z-index:47; backdrop-filter:blur(12px);">
     <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
@@ -1804,6 +1826,9 @@
     }
 
     function addCheckpointToSidebar(prompt, summary) {
+      // Add to mobile drawer too
+      addCheckpointToDrawer(prompt, summary);
+
       if (!sidebarCheckpoints) return;
       showSidebar();
       const card = document.createElement("div");
@@ -1833,6 +1858,74 @@
       // Final prompt intentionally not shown in sidebar
       return;
     }
+
+    // ── MOBILE DRAWER ─────────────────────────────────────────
+    let drawerOpen = false;
+
+    function toggleWorkspaceDrawer() {
+      const drawer = document.getElementById("workspace-drawer");
+      drawerOpen = !drawerOpen;
+      drawer.style.display = drawerOpen ? "block" : "none";
+    }
+
+    function updateDrawerCount(count) {
+      const badge = document.getElementById("drawer-draft-count");
+      const btn   = document.getElementById("workspace-drawer-btn");
+      if (badge) badge.textContent = count;
+      if (btn && count > 0) btn.style.display = "flex";
+    }
+
+    function addCheckpointToDrawer(prompt, summary) {
+      const drawerEmpty = document.getElementById("drawer-empty");
+      const drawerList  = document.getElementById("drawer-checkpoints");
+      if (!drawerList) return;
+      if (drawerEmpty) drawerEmpty.style.display = "none";
+
+      const num  = drawerList.children.length + 1;
+      const card = document.createElement("div");
+      card.style.cssText = "background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:10px;";
+
+      const header = document.createElement("div");
+      header.style.cssText = "display:flex;align-items:center;gap:8px;";
+      header.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:var(--amber);"></div><span style="font-size:11px;color:var(--amber);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;">DRAFT ${num}</span>${summary ? `<span style="font-size:11px;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${summary}</span>` : ""}`;
+
+      const body = document.createElement("div");
+      body.style.cssText = "font-size:13px;color:var(--text-muted);line-height:1.7;";
+      body.textContent = prompt;
+
+      const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;gap:8px;";
+
+      const useBtn = document.createElement("button");
+      useBtn.className = "btn-primary";
+      useBtn.style.cssText = "font-size:12px;padding:8px 16px;";
+      useBtn.textContent = "✓ Use";
+      useBtn.addEventListener("click", () => {
+        showFinal(prompt, []);
+        toggleWorkspaceDrawer();
+        useBtn.textContent = "✓ Using";
+      });
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "btn-secondary";
+      copyBtn.style.cssText = "font-size:12px;padding:8px 14px;";
+      copyBtn.textContent = "Copy";
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(prompt);
+        copyBtn.textContent = "✓ Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      });
+
+      btnRow.appendChild(useBtn);
+      btnRow.appendChild(copyBtn);
+      card.appendChild(header);
+      card.appendChild(body);
+      card.appendChild(btnRow);
+      drawerList.appendChild(card);
+
+      updateDrawerCount(drawerList.children.length);
+    }
+    // ─────────────────────────────────────────────────────────
 
     // Sidebar action buttons
     const sidebarCopyBtn = document.getElementById("sidebar-copy-btn");
@@ -1865,6 +1958,16 @@
       if (sidebarCheckpoints) sidebarCheckpoints.innerHTML = "";
       if (sidebarFinal)       sidebarFinal.style.display = "none";
       if (sidebarEmpty)       sidebarEmpty.style.display = "block";
+      const drawerList = document.getElementById("drawer-checkpoints");
+      const drawerEmpty = document.getElementById("drawer-empty");
+      if (drawerList)  drawerList.innerHTML = "";
+      if (drawerEmpty) drawerEmpty.style.display = "block";
+      updateDrawerCount(0);
+      const drawerBtn = document.getElementById("workspace-drawer-btn");
+      if (drawerBtn) drawerBtn.style.display = "none";
+      const drawer = document.getElementById("workspace-drawer");
+      if (drawer) drawer.style.display = "none";
+      drawerOpen = false;
       apiHistory = [];
       currentGoal = "";
       messages.innerHTML = "";
