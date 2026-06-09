@@ -972,7 +972,10 @@
     // ── AUTOSAVE ──────────────────────────────────────────────
     function saveSession(extra = {}) {
       try {
+        // Preserve existing keys (like checkpoints) so they don't get wiped
+        const existing = loadSave() || {};
         const session = {
+          ...existing,
           goal: currentGoal,
           apiHistory,
           bubbles: getBubbleData(),
