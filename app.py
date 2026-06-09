@@ -268,29 +268,32 @@ Respond ONLY with JSON: {"improved": "full rewritten prompt", "changes": ["chang
 
 
 
-SPLITTER_PROMPT = """You are a prompt execution planner. Your job is to split complex prompts into smaller sequential parts so each part can be answered fully without timing out.
+SPLITTER_PROMPT = """You are a prompt execution planner. Decide if a prompt needs splitting into parts.
 
-ALWAYS split if the prompt:
-- Requests a multi-day itinerary or schedule (split by day groups e.g. Day 1-2, Day 3-4, Day 5-6)
-- Asks for a comprehensive guide with multiple distinct sections
-- Requests comparisons across many items
-- Would naturally produce more than 600 words
+ONLY split if the prompt explicitly requests ALL of these together:
+- A multi-day schedule (4+ days) OR a very long structured guide with 4+ distinct sections
+- AND would clearly produce more than 1000 words in a single response
 
-HOW TO SPLIT:
-- Each sub-prompt must be self-contained and reference the original context
-- For itineraries: split by day groups, always include a brief "Overview & Tips" first
-- For guides: split by major sections
-- Aim for 3-5 parts
+DO NOT split:
+- Simple questions or tasks
+- Short prompts (under 100 words)
+- Prompts asking for a single piece of content (email, post, analysis, code)
+- Anything that can be answered well in one response
 
-Example for "6 day Chengdu itinerary focused on photography and food":
+If splitting IS needed, create 2-3 parts maximum. Each part must be fully self-contained.
+
+Respond ONLY with a JSON array. Examples:
+
+No split needed: ["original prompt here"]
+
+Split needed (6-day itinerary):
 [
-  "You are an expert travel planner. Provide an overview and key practical tips for a 6-day photography and food-focused trip to Chengdu, including best neighbourhoods, transport tips, and photography timing advice.",
-  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 1 and Day 2 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots.",
-  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 3 and Day 4 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots.",
-  "You are an expert travel planner. Provide a detailed day-by-day itinerary for Day 5 and Day 6 of a 6-day photography and food-focused trip to Chengdu. Include specific locations, timings, restaurant recommendations, and photography spots."
+  "Overview and practical tips for the trip: [context from original prompt]",
+  "Detailed itinerary for Days 1-3: [context from original prompt]",
+  "Detailed itinerary for Days 4-6: [context from original prompt]"
 ]
 
-Respond ONLY with a valid JSON array of strings. No preamble, no explanation outside the array."""
+IMPORTANT: Return the original prompt unchanged if no split is needed. Never split into more than 3 parts."""
 
 # ── BACKGROUND HELPERS ────────────────────────────────────────
 def build_checkpoint(messages):
