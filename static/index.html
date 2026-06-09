@@ -492,7 +492,9 @@
     <div id="chat">
       <div class="goal-recap"><span>Goal: </span><span id="goal-display"></span></div>
       <div class="save-indicator" id="save-indicator">AUTOSAVE ON</div>
-      <div id="messages"></div>
+      <div id="session-layout">
+        <div id="left-col">
+          <div id="messages"></div>
       <!-- CHECKPOINT CARD -->
       <div id="checkpoint-card" style="display:none; flex-direction:column; gap:12px; border:1px solid #f59e0b; background:var(--surface2); padding:20px; animation: fadeIn 0.4s ease;">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -580,7 +582,35 @@
         </div>
         <div class="hint">Enter to send · Shift+Enter for new line</div>
       </div>
-    </div>
+        </div><!-- /left-col -->
+
+        <!-- RIGHT SIDEBAR: prompt workspace -->
+        <div id="right-col">
+          <div id="sidebar-empty" class="sidebar-empty">
+            <div class="sidebar-empty-icon">✦</div>
+            <div style="font-weight:600;color:var(--text-dim);margin-bottom:6px;">Prompt Workspace</div>
+            <div>Checkpoint drafts and your final prompt will appear here as we build.</div>
+          </div>
+          <div id="sidebar-checkpoints" style="display:flex;flex-direction:column;gap:12px;"></div>
+          <div id="sidebar-final" style="display:none;" class="sidebar-card">
+            <div class="sidebar-card-header">
+              <div class="sidebar-card-dot" style="background:var(--green);box-shadow:0 0 8px var(--green);"></div>
+              <span class="sidebar-card-label" style="color:var(--green);">Forged Prompt</span>
+            </div>
+            <div class="sidebar-card-body">
+              <div id="sidebar-final-text" style="white-space:pre-wrap;word-break:break-word;color:#d4f5e9;"></div>
+            </div>
+            <div class="sidebar-card-actions">
+              <button class="btn-primary" id="sidebar-copy-btn" style="font-size:12px;padding:9px 16px;">Copy</button>
+              <button class="btn-secondary" id="sidebar-run-btn" style="font-size:12px;padding:9px 16px;">▶ Run</button>
+              <button class="btn-secondary" id="sidebar-save-btn" style="font-size:12px;padding:9px 16px;">📚 Save</button>
+            </div>
+            <div id="sidebar-optimizer" style="display:none;padding:12px 16px;border-top:1px solid var(--border);flex-direction:column;gap:6px;"></div>
+          </div>
+        </div><!-- /right-col -->
+
+      </div><!-- /session-layout -->
+    </div><!-- /chat -->
 
   </main>
 
