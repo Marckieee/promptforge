@@ -806,16 +806,27 @@ def stream_gemini(prompt: str):
     """Stream response from Gemini 1.5 Flash."""
     import urllib.request, urllib.error
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={GEMINI_API_KEY}&alt=sse"
-    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode()
+    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 4000}}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=120) as resp:
-        for line in resp:
-            line = line.decode("utf-8").strip()
+        buffer = ""
+        for raw_line in resp:
+            line = raw_line.decode("utf-8").strip()
+            if not line:
+                continue
             if line.startswith("data:"):
+                data_str = line[5:].strip()
+                if not data_str:
+                    continue
                 try:
-                    data = json.loads(line[5:].strip())
-                    text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    yield text
+                    data = json.loads(data_str)
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        for part in parts:
+                            text = part.get("text", "")
+                            if text:
+                                yield text
                 except Exception:
                     continue
 
