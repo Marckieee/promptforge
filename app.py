@@ -916,9 +916,7 @@ def route_and_run():
 
         def generate():
             import time
-            # Send routing info first
             yield f"data: {json.dumps({'routing': routing})}\n\n"
-
             last_heartbeat = time.time()
 
             try:
@@ -928,29 +926,24 @@ def route_and_run():
                     streamer = stream_groq(prompt)
                 elif model in ("deepseek", "qwen") and OPENROUTER_API_KEY:
                     streamer = stream_openrouter(prompt, model)
+                elif model == "claude":
+                    with client.messages.stream(
+                        model="claude-sonnet-4-6",
+                        max_tokens=4000,
+                        messages=[{"role": "user", "content": prompt}]
+                    ) as stream:
+                        for text in stream.text_stream:
+                            yield f"data: {json.dumps({'text': text})}\n\n"
+                            now = time.time()
+                            if now - last_heartbeat > 10:
+                                yield 'data: {"heartbeat": true}\n\n'
+                                last_heartbeat = now
+                    yield "data: [DONE]\n\n"
+                    return
                 else:
-                    # Claude — with fallback to Llama if credits unavailable
-                    try:
-                        with client.messages.stream(
-                            model="claude-sonnet-4-6",
-                            max_tokens=4000,
-                            messages=[{"role": "user", "content": prompt}]
-                        ) as stream:
-                            for text in stream.text_stream:
-                                yield f"data: {json.dumps({'text': text})}\n\n"
-                                now = time.time()
-                                if now - last_heartbeat > 10:
-                                    yield 'data: {"heartbeat": true}\n\n'
-                                    last_heartbeat = now
-                        yield "data: [DONE]\n\n"
-                        return
-                    except Exception as claude_err:
-                        # Fallback to Llama via Groq if Claude fails
-                        if GROQ_API_KEY:
-                            yield f"data: {json.dumps({'text': '\n[Claude unavailable — switching to Llama]\n\n'})}\n\n"
-                            streamer = stream_groq(prompt)
-                        else:
-                            raise claude_err
+                    yield f"data: {json.dumps({'error': f'Model {model} not available'})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
 
                 for text in streamer:
                     yield f"data: {json.dumps({'text': text})}\n\n"
