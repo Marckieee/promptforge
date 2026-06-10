@@ -712,9 +712,10 @@ if __name__ == "__main__":
 # ── AI ROUTER ─────────────────────────────────────────────────
 import urllib.request
 
-GEMINI_API_KEY    = os.environ.get("GEMINI_API_KEY")
-GROQ_API_KEY      = os.environ.get("GROQ_API_KEY")
-OPENROUTER_API_KEY= os.environ.get("OPENROUTER_API_KEY")
+GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY")
+GROQ_API_KEY       = os.environ.get("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+DEEPSEEK_API_KEY   = os.environ.get("DEEPSEEK_API_KEY")
 
 # Model definitions
 AI_MODELS = {
@@ -741,7 +742,7 @@ AI_MODELS = {
     },
     "deepseek": {
         "name": "DeepSeek R1",
-        "provider": "OpenRouter",
+        "provider": "DeepSeek",
         "icon": "🟡",
         "strengths": ["math", "logic", "reasoning", "problem solving", "analysis"],
         "description": "Best for math, logical reasoning and structured problem solving"
@@ -899,6 +900,40 @@ def stream_openrouter(prompt: str, model: str):
                     continue
 
 
+def stream_deepseek(prompt: str):
+    """Stream response directly from DeepSeek API."""
+    import urllib.request
+    url = "https://api.deepseek.com/chat/completions"
+    body = json.dumps({
+        "model": "deepseek-reasoner",
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": 8000,
+    }).encode()
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+    }, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if not line or line == "data: [DONE]":
+                continue
+            if line.startswith("data:"):
+                try:
+                    data = json.loads(line[5:].strip())
+                    choices = data.get("choices", [])
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    # DeepSeek reasoner has reasoning_content and content
+                    text = delta.get("content") or ""
+                    if text:
+                        yield text
+                except Exception:
+                    continue
+
+
 @app.route("/api/route", methods=["POST"])
 def route_and_run():
     """Route a prompt to the best AI and stream the response."""
@@ -923,7 +958,9 @@ def route_and_run():
             try:
                 if model == "gemini" and GEMINI_API_KEY:
                     streamer = stream_gemini(prompt)
-                elif model in ("deepseek", "qwen", "llama") and OPENROUTER_API_KEY:
+                elif model == "deepseek" and DEEPSEEK_API_KEY:
+                    streamer = stream_deepseek(prompt)
+                elif model in ("qwen", "llama") and OPENROUTER_API_KEY:
                     streamer = stream_openrouter(prompt, model)
                 elif model == "claude":
                     with client.messages.stream(
