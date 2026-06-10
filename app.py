@@ -734,7 +734,7 @@ AI_MODELS = {
     },
     "llama": {
         "name": "Llama 3.3 70B",
-        "provider": "Groq",
+        "provider": "OpenRouter",
         "icon": "🟣",
         "strengths": ["coding", "technical", "programming", "debugging", "fast responses"],
         "description": "Best for coding, technical tasks and fast responses"
@@ -863,7 +863,8 @@ def stream_openrouter(prompt: str, model: str):
     import urllib.request
     model_map = {
         "deepseek": "deepseek/deepseek-r1:free",
-        "qwen": "qwen/qwen3-coder:free",
+        "qwen":     "qwen/qwen3-coder:free",
+        "llama":    "meta-llama/llama-3.3-70b-instruct:free",
     }
     url = "https://openrouter.ai/api/v1/chat/completions"
     body = json.dumps({
@@ -922,9 +923,7 @@ def route_and_run():
             try:
                 if model == "gemini" and GEMINI_API_KEY:
                     streamer = stream_gemini(prompt)
-                elif model == "llama" and GROQ_API_KEY:
-                    streamer = stream_groq(prompt)
-                elif model in ("deepseek", "qwen") and OPENROUTER_API_KEY:
+                elif model in ("deepseek", "qwen", "llama") and OPENROUTER_API_KEY:
                     streamer = stream_openrouter(prompt, model)
                 elif model == "claude":
                     with client.messages.stream(
