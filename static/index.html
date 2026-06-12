@@ -1749,7 +1749,11 @@
                 if (parsed.heartbeat || parsed.routing || parsed.error) continue;
                 if (parsed.text && !parsed.text.includes("───")) {
                   fullText += parsed.text;
-                  resBubble.innerHTML = renderMarkdown(fullText);
+                  try {
+                    resBubble.innerHTML = typeof marked !== "undefined" ? marked.parse(fullText) : fullText;
+                  } catch(e) {
+                    resBubble.textContent = fullText;
+                  }
                   scrollBottom();
                 }
               } catch {}
