@@ -1664,11 +1664,22 @@
       // Show follow-up input
       followupWrap.style.display = "flex";
       followupWrap.style.flexDirection = "column";
-      // Build follow-up history from sections
+      // Build follow-up history from run sections
       followupHistory = [];
-      runSections.querySelectorAll(".run-section").forEach(s => {
-        if (s.dataset.rawText) followupHistory.push(s.dataset.rawText);
-      });
+      const sections = document.getElementById("run-sections");
+      if (sections) {
+        sections.querySelectorAll(".run-section").forEach(s => {
+          if (s.dataset.raw) followupHistory.push(s.dataset.raw);
+          else if (s.dataset.rawText) followupHistory.push(s.dataset.rawText);
+        });
+      }
+      // Fallback - use section body text
+      if (followupHistory.length === 0 && sections) {
+        sections.querySelectorAll(".run-section-body, div[style*='padding:20px']").forEach(b => {
+          if (b.textContent.trim()) followupHistory.push(b.textContent.trim());
+        });
+      }
+      console.log("followupHistory populated:", followupHistory.length, "sections");
       scrollBottom();
     }
 
