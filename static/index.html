@@ -591,19 +591,21 @@
               </div>
             </div>
 
+            <!-- Model selector — always visible after final prompt -->
+            <div id="model-selector-wrap" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
+              <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">RUN WITH:</span>
+              <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:13px;padding:7px 12px;outline:none;cursor:pointer;flex:1;max-width:280px;">
+                <option value="auto">✦ Auto (best model)</option>
+                <option value="claude">🟠 Claude Sonnet</option>
+                <option value="gemini">🔵 Gemini 2.5 Flash</option>
+                <option value="chatgpt">🟢 GPT-4o mini</option>
+                <option value="deepseek">🟡 DeepSeek R1</option>
+              </select>
+            </div>
+
             <!-- RUN PANEL -->
             <div id="run-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:8px; animation: fadeIn 0.4s ease;">
-              <!-- Model selector -->
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-                <span style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">RUN WITH:</span>
-                <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
-                  <option value="auto">✦ Auto (best model)</option>
-                  <option value="claude">🟠 Claude Sonnet</option>
-                  <option value="gemini">🔵 Gemini 2.5 Flash</option>
-                  <option value="chatgpt">🟢 GPT-4o mini</option>
-                  <option value="deepseek">🟡 DeepSeek R1</option>
-                </select>
-              </div>
+
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <div id="run-status-dot" style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
                 <span id="run-status-label" style="font-size:11px;color:#3b82f6;letter-spacing:0.15em;">AI RESPONSE</span>
@@ -1331,6 +1333,9 @@
       finalPrompt.textContent = prompt;
       // Show routing preview
       showRoutingPreview(prompt, "auto");
+      // Show model selector
+      const msWrap = document.getElementById("model-selector-wrap");
+      if (msWrap) msWrap.style.display = "flex";
       showRoutingPreview(prompt, "auto");
 
 
@@ -2158,6 +2163,8 @@
       if (document.getElementById("stop-btn")) document.getElementById("stop-btn").style.display = "none";
       if (runSections) runSections.innerHTML = "";
       if (followupWrap) followupWrap.style.display = "none";
+      const msWrapR = document.getElementById("model-selector-wrap");
+      if (msWrapR) msWrapR.style.display = "none";
       const rc = document.getElementById("routing-card"); if (rc) rc.style.display = "none";
       if (optimizerWrap) optimizerWrap.style.display = "none";
       if (optimizerChanges) optimizerChanges.innerHTML = "";
