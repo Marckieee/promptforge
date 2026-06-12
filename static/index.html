@@ -594,7 +594,7 @@
             <!-- Model selector — always visible after final prompt -->
             <div id="model-selector-wrap" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
               <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">RUN WITH:</span>
-              <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:13px;padding:7px 12px;outline:none;cursor:pointer;flex:1;max-width:280px;">
+              <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:#1a1a2e;border:1px solid var(--border2);border-radius:var(--radius-xs);color:#f0eee8;font-family:'Cabinet Grotesk',sans-serif;font-size:13px;padding:7px 12px;outline:none;cursor:pointer;flex:1;max-width:280px;">
                 <option value="auto">✦ Auto (best model)</option>
                 <option value="claude">🟠 Claude Sonnet</option>
                 <option value="gemini">🔵 Gemini 2.5 Flash</option>
