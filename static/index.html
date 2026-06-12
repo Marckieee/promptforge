@@ -1479,13 +1479,7 @@
     }
 
     // Model info for preview
-    const MODEL_INFO = {
-      "claude":   { name: "Claude Sonnet",    provider: "Anthropic", icon: "🟠" },
-      "gemini":   { name: "Gemini 2.5 Flash", provider: "Google",    icon: "🔵" },
-      "chatgpt":  { name: "GPT-4o mini",      provider: "OpenAI",    icon: "🟢" },
-      "deepseek": { name: "DeepSeek R1",      provider: "DeepSeek",  icon: "🟡" },
-    };
-
+    
     function getAutoModel(prompt) {
       const p = prompt.toLowerCase();
       if (/code|python|javascript|debug|function|programming|script|sql|bug|algorithm/.test(p)) return "chatgpt";
