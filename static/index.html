@@ -109,16 +109,13 @@
       width: 320px;
       flex-shrink: 0;
       align-self: flex-start;
-      display: none;
+      display: flex;
       flex-direction: column;
       gap: 14px;
       position: sticky;
       top: 80px;
       max-height: calc(100vh - 100px);
       overflow-y: auto;
-    }
-    #chat.active #right-col {
-      display: flex;
     }
     #right-col::-webkit-scrollbar { width: 3px; }
     #right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
