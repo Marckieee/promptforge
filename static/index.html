@@ -109,13 +109,16 @@
       width: 320px;
       flex-shrink: 0;
       align-self: flex-start;
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 14px;
       position: sticky;
       top: 80px;
       max-height: calc(100vh - 100px);
       overflow-y: auto;
+    }
+    #chat.active #right-col {
+      display: flex;
     }
     #right-col::-webkit-scrollbar { width: 3px; }
     #right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
@@ -654,7 +657,7 @@
         </div><!-- /left-col -->
 
         <!-- RIGHT SIDEBAR: prompt workspace -->
-        <div id="right-col" style="display:none;">
+        <div id="right-col">
           <div id="sidebar-empty" class="sidebar-empty">
             <div class="sidebar-empty-icon">✦</div>
             <div style="font-weight:600;color:var(--text-dim);margin-bottom:6px;">Prompt Workspace</div>
