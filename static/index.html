@@ -579,7 +579,7 @@
         <!-- Model selector -->
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
           <span style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">RUN WITH:</span>
-          <select id="model-selector" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
+          <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
             <option value="auto">✦ Auto (best model)</option>
             <option value="claude">🟠 Claude Sonnet</option>
             <option value="gemini">🔵 Gemini 2.5 Flash</option>
@@ -1324,6 +1324,8 @@
       finalWrap.style.display = "flex";
       finalWrap.style.flexDirection = "column";
       finalPrompt.textContent = prompt;
+      // Show routing preview
+      showRoutingPreview(prompt, "auto");
 
 
       // Show optimizer changes if any
@@ -1431,6 +1433,47 @@
 
     function startNewSection(label) {
       currentSectionText = ""; currentSection = createSection(label);
+    }
+
+    // Model info for preview
+    const MODEL_INFO = {
+      "claude":   { name: "Claude Sonnet",    provider: "Anthropic", icon: "🟠" },
+      "gemini":   { name: "Gemini 2.5 Flash", provider: "Google",    icon: "🔵" },
+      "chatgpt":  { name: "GPT-4o mini",      provider: "OpenAI",    icon: "🟢" },
+      "deepseek": { name: "DeepSeek R1",      provider: "DeepSeek",  icon: "🟡" },
+    };
+
+    function getAutoModel(prompt) {
+      const p = prompt.toLowerCase();
+      if (/code|python|javascript|debug|function|programming|script|sql|bug|algorithm/.test(p)) return "chatgpt";
+      if (/math|calculate|equation|proof|theorem|statistics|probability/.test(p)) return "deepseek";
+      if (/travel|itinerary|restaurant|hotel|research|facts|history|science|city|visit|tour/.test(p)) return "gemini";
+      if (/write|email|business|report|essay|blog|content|marketing/.test(p)) return "chatgpt";
+      return "claude";
+    }
+
+    function showRoutingPreview(prompt, selectedModel) {
+      const routingCard = document.getElementById("routing-card");
+      if (!routingCard) return;
+      const model = selectedModel === "auto" || !selectedModel
+        ? getAutoModel(prompt)
+        : selectedModel;
+      const info = MODEL_INFO[model] || MODEL_INFO["claude"];
+      const reasons = {
+        "claude":   "Best for creative and complex reasoning tasks",
+        "gemini":   "Best for research, travel and factual content",
+        "chatgpt":  "Best for coding, writing and general tasks",
+        "deepseek": "Best for math, logic and structured reasoning",
+      };
+      const iconEl  = document.getElementById("routing-icon");
+      const nameEl  = document.getElementById("routing-model-name");
+      const reasonEl= document.getElementById("routing-reason");
+      if (iconEl)   iconEl.textContent  = info.icon;
+      if (nameEl)   nameEl.textContent  = `${info.name} (${info.provider})`;
+      if (reasonEl) reasonEl.textContent = selectedModel === "auto" || !selectedModel
+        ? `Auto-selected · ${reasons[model]}`
+        : `User selected · ${reasons[model]}`;
+      routingCard.style.display = "block";
     }
 
     async function executeRun() {
