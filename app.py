@@ -716,6 +716,7 @@ GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY")
 GROQ_API_KEY       = os.environ.get("GROQ_API_KEY")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 DEEPSEEK_API_KEY   = os.environ.get("DEEPSEEK_API_KEY")
+OPENAI_API_KEY     = os.environ.get("OPENAI_API_KEY")
 
 # Model definitions
 AI_MODELS = {
@@ -733,12 +734,12 @@ AI_MODELS = {
         "strengths": ["research", "factual questions", "travel", "science", "current events", "summarisation"],
         "description": "Best for research, factual queries and travel planning"
     },
-    "llama": {
-        "name": "Llama 3.3 70B",
-        "provider": "OpenRouter",
-        "icon": "🟣",
-        "strengths": ["coding", "technical", "programming", "debugging", "fast responses"],
-        "description": "Best for coding, technical tasks and fast responses"
+    "chatgpt": {
+        "name": "GPT-4o mini",
+        "provider": "OpenAI",
+        "icon": "🟢",
+        "strengths": ["coding", "writing", "analysis", "general tasks", "fast responses"],
+        "description": "Best for coding, writing and general tasks"
     },
     "deepseek": {
         "name": "DeepSeek R1",
@@ -746,13 +747,6 @@ AI_MODELS = {
         "icon": "🟡",
         "strengths": ["math", "logic", "reasoning", "problem solving", "analysis"],
         "description": "Best for math, logical reasoning and structured problem solving"
-    },
-    "qwen": {
-        "name": "Qwen3 Coder",
-        "provider": "OpenRouter",
-        "icon": "🟢",
-        "strengths": ["writing", "business", "multilingual", "summarisation", "general"],
-        "description": "Best for writing, business tasks and multilingual content"
     },
 }
 
@@ -778,22 +772,21 @@ def route_prompt(prompt: str) -> dict:
 
     # Keyword-based routing — instant, no API needed
     if any(w in prompt_lower for w in ["code", "python", "javascript", "debug", "function", "programming", "script", "sql", "error", "fix", "bug", "algorithm", "class", "variable"]):
-        model_id = "llama"
+        model_id = "chatgpt"
     elif any(w in prompt_lower for w in ["math", "calculate", "equation", "proof", "theorem", "integral", "derivative", "statistics", "probability"]):
         model_id = "deepseek"
     elif any(w in prompt_lower for w in ["travel", "itinerary", "restaurant", "hotel", "flight", "research", "facts", "history", "science", "geography", "country", "city", "visit", "tour"]):
         model_id = "gemini"
     elif any(w in prompt_lower for w in ["write", "email", "business", "report", "summarise", "summarize", "essay", "blog", "content", "copy", "marketing", "proposal"]):
-        model_id = "qwen"
+        model_id = "chatgpt"
     else:
         model_id = "claude"
 
     reasons = {
-        "llama": "Prompt involves coding or technical tasks — Llama excels here",
-        "deepseek": "Prompt requires logical reasoning or analysis — DeepSeek is optimised for this",
+        "chatgpt": "Prompt involves coding, writing or general tasks — GPT-4o mini is fast and capable",
+        "deepseek": "Prompt requires logical reasoning or math — DeepSeek is optimised for this",
         "gemini": "Prompt involves research, travel or factual content — Gemini is best for this",
-        "qwen": "Prompt involves writing or business content — Qwen handles this well",
-        "claude": "General or creative task — Claude is the best fit",
+        "claude": "Creative or complex reasoning task — Claude is the best fit",
     }
 
     return {
@@ -934,6 +927,39 @@ def stream_deepseek(prompt: str):
                     continue
 
 
+def stream_openai(prompt: str):
+    """Stream response from OpenAI GPT-4o mini."""
+    import urllib.request
+    url = "https://api.openai.com/v1/chat/completions"
+    body = json.dumps({
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": 4000,
+    }).encode()
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+    }, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if not line or line == "data: [DONE]":
+                continue
+            if line.startswith("data:"):
+                try:
+                    data = json.loads(line[5:].strip())
+                    choices = data.get("choices", [])
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    text = delta.get("content", "")
+                    if text:
+                        yield text
+                except Exception:
+                    continue
+
+
 @app.route("/api/route", methods=["POST"])
 def route_and_run():
     """Route a prompt to the best AI and stream the response."""
@@ -960,8 +986,8 @@ def route_and_run():
                     streamer = stream_gemini(prompt)
                 elif model == "deepseek" and DEEPSEEK_API_KEY:
                     streamer = stream_deepseek(prompt)
-                elif model in ("qwen", "llama") and OPENROUTER_API_KEY:
-                    streamer = stream_openrouter(prompt, model)
+                elif model == "chatgpt" and OPENAI_API_KEY:
+                    streamer = stream_openai(prompt)
                 elif model == "claude":
                     with client.messages.stream(
                         model="claude-sonnet-4-6",
