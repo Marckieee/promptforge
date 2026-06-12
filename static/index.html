@@ -2282,6 +2282,15 @@
           document.getElementById("user-menu").style.display   = "flex";
           document.getElementById("user-name").textContent     = firstName;
           document.getElementById("user-avatar").src           = avatar;
+          // Show Library and Prefs only when logged in
+          const libBtn = document.getElementById("library-btn");
+          const prefsBtn = document.getElementById("prefs-btn");
+          const mLibBtn = document.getElementById("mobile-library-btn");
+          const mPrefsBtn = document.getElementById("mobile-prefs-btn");
+          if (libBtn) libBtn.style.display = "inline-flex";
+          if (prefsBtn) prefsBtn.style.display = "inline-flex";
+          if (mLibBtn) mLibBtn.style.display = "block";
+          if (mPrefsBtn) mPrefsBtn.style.display = "block";
           // Mobile
           document.getElementById("mobile-login-btn").style.display  = "none";
           document.getElementById("mobile-user-menu").style.display  = "flex";
@@ -2290,6 +2299,15 @@
         } else {
           document.getElementById("login-btn").style.display   = "block";
           document.getElementById("user-menu").style.display   = "none";
+          // Hide Library and Prefs when logged out
+          const libBtnO = document.getElementById("library-btn");
+          const prefsBtnO = document.getElementById("prefs-btn");
+          const mLibBtnO = document.getElementById("mobile-library-btn");
+          const mPrefsBtnO = document.getElementById("mobile-prefs-btn");
+          if (libBtnO) libBtnO.style.display = "none";
+          if (prefsBtnO) prefsBtnO.style.display = "none";
+          if (mLibBtnO) mLibBtnO.style.display = "none";
+          if (mPrefsBtnO) mPrefsBtnO.style.display = "none";
           document.getElementById("mobile-login-btn").style.display  = "block";
           document.getElementById("mobile-user-menu").style.display  = "none";
         }
