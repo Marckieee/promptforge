@@ -536,127 +536,120 @@
       <div class="goal-recap"><span>Goal: </span><span id="goal-display"></span></div>
       <div class="save-indicator" id="save-indicator">AUTOSAVE ON</div>
       <div id="session-layout">
+
+        <!-- LEFT COL: conversation -->
         <div id="left-col">
           <div id="messages"></div>
-      <!-- CHECKPOINT CARD -->
-      <div id="checkpoint-card" style="display:none; flex-direction:column; gap:12px; border:1px solid #f59e0b; background:var(--surface2); padding:20px; animation: fadeIn 0.4s ease;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
-          <span style="font-size:11px;color:#f59e0b;letter-spacing:0.15em;">CHECKPOINT DRAFT</span>
-          <span id="checkpoint-summary" style="font-size:11px;color:#5a5a6e;margin-left:4px;"></span>
-        </div>
-        <div id="checkpoint-text" style="font-size:13px;line-height:1.8;color:#c8c4b9;white-space:pre-wrap;word-break:break-word;"></div>
-        <div style="font-size:12px;color:#5a5a6e;margin-top:4px;">What would you like to do with this draft?</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn-primary" id="checkpoint-use-btn">✓ Use As Is</button>
-          <button class="btn-primary" id="checkpoint-improve-btn" style="background:#8b5cf6;">✦ Use &amp; Keep Improving</button>
-          <button class="btn-secondary" id="checkpoint-continue-btn">→ Continue Without Using</button>
-        </div>
-      </div>
-      <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
 
-      <!-- FINAL PROMPT -->
-      <div id="final-wrap">
-        <div class="final-label">
-          <div class="final-dot"></div>
-          <span class="final-label-text">YOUR FORGED PROMPT</span>
-        </div>
-        <div class="final-box" id="final-prompt-text"></div>
-        <div id="optimizer-wrap" style="display:none;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <div style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;"></div>
-            <span style="font-size:11px;color:#8b5cf6;letter-spacing:0.15em;">AUTO-OPTIMIZED</span>
-          </div>
-          <div id="optimizer-changes" style="display:flex; flex-direction:column; gap:6px;"></div>
-        </div>
-        <div class="final-actions">
-          <button class="btn-primary" id="run-btn">▶ Run Prompt</button>
-          <button class="btn-primary" id="copy-btn">Copy Prompt</button>
-          <button class="btn-secondary" id="save-library-btn">📚 Save to Library</button>
-          <button class="btn-secondary" id="reset-btn-2">Start Over</button>
-        </div>
-
-      <!-- RUN RESULT PANEL -->
-
-        <!-- Routing preview — shown when final prompt is ready -->
-        <div id="routing-card" style="display:none;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:14px 18px;animation:fadeIn 0.3s ease;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span id="routing-icon" style="font-size:20px;"></span>
-            <div>
-              <div id="routing-model-name" style="font-size:13px;font-weight:700;color:#f0eee8;"></div>
-              <div id="routing-reason" style="font-size:12px;color:#9e9a8e;margin-top:4px;"></div>
+          <!-- CHECKPOINT CARD -->
+          <div id="checkpoint-card" style="display:none; flex-direction:column; gap:12px; border:1px solid #f59e0b; background:var(--surface2); padding:20px; animation: fadeIn 0.4s ease;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+              <span style="font-size:11px;color:#f59e0b;letter-spacing:0.15em;">CHECKPOINT DRAFT</span>
+              <span id="checkpoint-summary" style="font-size:11px;color:#5a5a6e;margin-left:4px;"></span>
+            </div>
+            <div id="checkpoint-text" style="font-size:13px;line-height:1.8;color:#c8c4b9;white-space:pre-wrap;word-break:break-word;"></div>
+            <div style="font-size:12px;color:#5a5a6e;margin-top:4px;">What would you like to do with this draft?</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn-primary" id="checkpoint-use-btn">✓ Use As Is</button>
+              <button class="btn-primary" id="checkpoint-improve-btn" style="background:#8b5cf6;">✦ Use &amp; Keep Improving</button>
+              <button class="btn-secondary" id="checkpoint-continue-btn">→ Continue Without Using</button>
             </div>
           </div>
-        </div>
-      <div id="run-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:8px; animation: fadeIn 0.4s ease;">
-        <!-- Model selector -->
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-          <span style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">RUN WITH:</span>
-          <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
-            <option value="auto">✦ Auto (best model)</option>
-            <option value="claude">🟠 Claude Sonnet</option>
-            <option value="gemini">🔵 Gemini 2.5 Flash</option>
-            <option value="chatgpt">🟢 GPT-4o mini</option>
-            <option value="deepseek">🟡 DeepSeek R1</option>
-          </select>
-        </div>
-        
+
+          <div id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="loading-text">FORGING...</span></div>
+
+          <!-- FINAL PROMPT -->
+          <div id="final-wrap">
+            <div class="final-label">
+              <div class="final-dot"></div>
+              <span class="final-label-text">YOUR FORGED PROMPT</span>
             </div>
-          </div>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div id="run-status-dot" style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
-          <span id="run-status-label" style="font-size:11px;color:#3b82f6;letter-spacing:0.15em;">AI RESPONSE</span>
-          <div id="run-loading" style="display:none; margin-left:8px; gap:4px; align-items:center;">
-            <div class="dot" style="width:5px;height:5px;"></div>
-            <div class="dot" style="width:5px;height:5px;animation-delay:0.2s;"></div>
-            <div class="dot" style="width:5px;height:5px;animation-delay:0.4s;"></div>
-          </div>
-          <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:'Cabinet Grotesk',sans-serif; font-size:11px; padding:4px 12px; cursor:pointer; border-radius:4px;">■ Stop</button>
-          <div id="run-error-msg" style="display:none; font-size:11px; color:#f87171; margin-left:4px;"></div>
-        </div>
-        <div id="run-retry-wrap" style="display:none; gap:10px; align-items:center;">
-          <button class="btn-primary" id="retry-btn" style="background:#f59e0b;">↺ Retry</button>
-          <span style="font-size:11px; color:#5a5a6e;">Response may have been cut off</span>
-        </div>
-        <div id="run-continue-wrap" style="display:none; flex-direction:column; gap:10px; padding:16px; background:var(--amber-glow); border:1px solid rgba(240,165,0,0.3); border-radius:var(--radius-sm);">
-          <div style="font-size:13px; color:var(--amber); font-weight:600;">✦ First part loaded — does this look right?</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn-primary" id="continue-btn">▶ Continue Loading</button>
-            <button class="btn-secondary" id="stop-here-btn">✓ Stop Here</button>
-          </div>
-        </div>
+            <div class="final-box" id="final-prompt-text"></div>
+            <div id="optimizer-wrap" style="display:none;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;"></div>
+                <span style="font-size:11px;color:#8b5cf6;letter-spacing:0.15em;">AUTO-OPTIMIZED</span>
+              </div>
+              <div id="optimizer-changes" style="display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+            <div class="final-actions">
+              <button class="btn-primary" id="run-btn">▶ Run Prompt</button>
+              <button class="btn-primary" id="copy-btn">Copy Prompt</button>
+              <button class="btn-secondary" id="save-library-btn">📚 Save to Library</button>
+              <button class="btn-secondary" id="reset-btn-2">Start Over</button>
+            </div>
 
-        <!-- Sections container -->
-        <div id="run-sections" style="display:flex;flex-direction:column;gap:12px;"></div>
+            <!-- Routing preview -->
+            <div id="routing-card" style="display:none;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:14px 18px;margin-top:10px;animation:fadeIn 0.3s ease;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span id="routing-icon" style="font-size:20px;"></span>
+                <div>
+                  <div id="routing-model-name" style="font-size:13px;font-weight:700;color:#f0eee8;"></div>
+                  <div id="routing-reason" style="font-size:12px;color:#9e9a8e;margin-top:4px;"></div>
+                </div>
+              </div>
+            </div>
 
-        <!-- Follow-up input -->
-        <div id="followup-wrap" style="display:none;flex-direction:column;gap:10px;margin-top:4px;padding:16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);">
-          <div style="font-size:13px;font-weight:600;color:var(--text);">💬 Ask a follow-up</div>
-          <div style="display:flex;gap:8px;">
-            <textarea id="followup-input" rows="2" placeholder="Ask anything about this response..." style="flex:1;"></textarea>
-            <button class="btn-primary" id="followup-send-btn" style="padding:12px 18px;align-self:flex-end;">→</button>
+            <!-- RUN PANEL -->
+            <div id="run-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:8px; animation: fadeIn 0.4s ease;">
+              <!-- Model selector -->
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <span style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">RUN WITH:</span>
+                <select id="model-selector" onchange="showRoutingPreview(finalPrompt ? finalPrompt.textContent : '', this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xs);color:var(--text);font-family:'Cabinet Grotesk',sans-serif;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;">
+                  <option value="auto">✦ Auto (best model)</option>
+                  <option value="claude">🟠 Claude Sonnet</option>
+                  <option value="gemini">🔵 Gemini 2.5 Flash</option>
+                  <option value="chatgpt">🟢 GPT-4o mini</option>
+                  <option value="deepseek">🟡 DeepSeek R1</option>
+                </select>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div id="run-status-dot" style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
+                <span id="run-status-label" style="font-size:11px;color:#3b82f6;letter-spacing:0.15em;">AI RESPONSE</span>
+                <div id="run-loading" style="display:none; margin-left:8px; gap:4px; align-items:center;">
+                  <div class="dot" style="width:5px;height:5px;"></div>
+                  <div class="dot" style="width:5px;height:5px;animation-delay:0.2s;"></div>
+                  <div class="dot" style="width:5px;height:5px;animation-delay:0.4s;"></div>
+                </div>
+                <button id="stop-btn" style="display:none; margin-left:8px; background:#f87171; color:#0a0a0f; border:none; font-family:'Cabinet Grotesk',sans-serif; font-size:11px; padding:4px 12px; cursor:pointer; border-radius:4px;">■ Stop</button>
+                <div id="run-error-msg" style="display:none; font-size:11px; color:#f87171; margin-left:4px;"></div>
+              </div>
+              <div id="run-retry-wrap" style="display:none; gap:10px; align-items:center;">
+                <button class="btn-primary" id="retry-btn" style="background:#f59e0b;">↺ Retry</button>
+                <span style="font-size:11px; color:#5a5a6e;">Response may have been cut off</span>
+              </div>
+              <div id="run-continue-wrap" style="display:none; flex-direction:column; gap:10px; padding:16px; background:var(--amber-glow); border:1px solid rgba(240,165,0,0.3); border-radius:var(--radius-sm);">
+                <div style="font-size:13px; color:var(--amber); font-weight:600;">✦ First part loaded — does this look right?</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="btn-primary" id="continue-btn">▶ Continue Loading</button>
+                  <button class="btn-secondary" id="stop-here-btn">✓ Stop Here</button>
+                </div>
+              </div>
+              <div id="run-sections" style="display:flex;flex-direction:column;gap:12px;"></div>
+              <div id="followup-wrap" style="display:none;flex-direction:column;gap:10px;margin-top:4px;padding:16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);">
+                <div style="font-size:13px;font-weight:600;color:var(--text);">💬 Ask a follow-up</div>
+                <div style="display:flex;gap:8px;">
+                  <textarea id="followup-input" rows="2" placeholder="Ask anything about this response..." style="flex:1;"></textarea>
+                  <button class="btn-primary" id="followup-send-btn" style="padding:12px 18px;align-self:flex-end;">→</button>
+                </div>
+              </div>
+            </div><!-- /run-wrap -->
+          </div><!-- /final-wrap -->
+
+          <!-- QUESTION + INPUT -->
+          <div id="input-area">
+            <div id="question-text"></div>
+            <div id="options-wrap"></div>
+            <div class="input-row">
+              <textarea id="answer-input" rows="2" placeholder="Type your answer..."></textarea>
+              <button class="btn-primary send-btn" id="send-btn">→</button>
+            </div>
+            <div class="hint">Enter to send · Shift+Enter for new line</div>
           </div>
-        </div>
-      </div>
-      </div>
-
-      <!-- QUESTION + INPUT -->
-      <div id="input-area">
-        <div id="question-text"></div>
-        <div id="options-wrap"></div>
-        <div class="input-row">
-          <textarea id="answer-input" rows="2" placeholder="Type your answer..."></textarea>
-          <button class="btn-primary send-btn" id="send-btn">→</button>
-        </div>
-        <div class="hint">Enter to send · Shift+Enter for new line</div>
-      </div>
         </div><!-- /left-col -->
 
         <!-- RIGHT SIDEBAR: prompt workspace -->
-
-      
-
         <div id="right-col">
           <div id="sidebar-empty" class="sidebar-empty">
             <div class="sidebar-empty-icon">✦</div>
@@ -680,6 +673,7 @@
             <div id="sidebar-optimizer" style="display:none;padding:12px 16px;border-top:1px solid var(--border);flex-direction:column;gap:6px;"></div>
           </div>
         </div><!-- /right-col -->
+
       </div><!-- /session-layout -->
     </div><!-- /chat -->
 
