@@ -871,6 +871,11 @@
     }
 
     async function saveToLibrary(prompt, goal) {
+      // Must be logged in to save
+      if (!currentUser) {
+        showToast("Please sign in to save prompts to your library.");
+        return;
+      }
       // Capture full session snapshot
       const sessionSnapshot = JSON.stringify({
         goal,
@@ -2124,6 +2129,14 @@
       }
     });
     // ─────────────────────────────────────────────────────────
+
+    function showToast(msg) {
+      const toast = document.createElement("div");
+      toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid var(--amber);color:var(--text);padding:12px 24px;border-radius:8px;font-size:13px;z-index:999;animation:fadeIn 0.3s ease;";
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
 
     function resetSession() {
       clearSave();
