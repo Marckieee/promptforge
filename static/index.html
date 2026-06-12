@@ -1416,8 +1416,8 @@
       body.style.cssText = "padding:20px 24px;font-size:14px;line-height:1.85;color:#dbeafe;word-break:break-word;";
       section.appendChild(hdr); section.appendChild(body);
       section.dataset.raw = "";
-      const rs = document.getElementById("run-sections");
-      if (rs) rs.appendChild(section);
+      const rsEl = document.getElementById("run-sections");
+      if (rsEl) rsEl.appendChild(section);
       return { section, body };
     }
 
