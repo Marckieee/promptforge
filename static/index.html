@@ -1526,7 +1526,7 @@
       const prompt = finalPrompt.textContent;
       runWrap.style.display = "flex";
       runWrap.style.flexDirection = "column";
-      if (runSections) runSections.innerHTML = "";
+      if (runSections) { runSections.innerHTML = ""; currentSection = null; currentSectionText = ""; sectionCount = 0; }
       runLoading.style.display = "flex";
       runRetryWrap.style.display = "none";
       runErrorMsg.style.display = "none";
@@ -2161,7 +2161,7 @@
       runErrorMsg.style.display = "none";
       if (document.getElementById("run-continue-wrap")) document.getElementById("run-continue-wrap").style.display = "none";
       if (document.getElementById("stop-btn")) document.getElementById("stop-btn").style.display = "none";
-      if (runSections) runSections.innerHTML = "";
+      if (runSections) { runSections.innerHTML = ""; currentSection = null; currentSectionText = ""; sectionCount = 0; }
       if (followupWrap) followupWrap.style.display = "none";
       const msWrapR = document.getElementById("model-selector-wrap");
       if (msWrapR) msWrapR.style.display = "none";
