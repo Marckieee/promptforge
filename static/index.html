@@ -411,8 +411,8 @@
     <!-- Desktop nav (hidden on mobile via CSS) -->
     <div id="desktop-nav" style="display:flex;gap:6px;align-items:center;">
       <button class="btn-secondary" id="reset-btn" style="display:none;font-size:12px;padding:7px 14px;">↩ New</button>
-      <button class="btn-secondary" id="library-btn" style="font-size:12px;padding:7px 14px;">📚 Library</button>
-      <button class="btn-secondary" id="prefs-btn" style="font-size:12px;padding:7px 14px;">⚙ Prefs</button>
+      <button class="btn-secondary" id="library-btn" style="display:none;" style="font-size:12px;padding:7px 14px;">📚 Library</button>
+      <button class="btn-secondary" id="prefs-btn" style="display:none;" style="font-size:12px;padding:7px 14px;">⚙ Prefs</button>
       <button id="login-btn" class="btn-secondary" style="font-size:12px;padding:7px 14px;" onclick="window.location.href='/auth/google'">🔑 Sign in</button>
       <div id="user-menu" style="display:none;align-items:center;gap:6px;">
         <img id="user-avatar" src="" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);" />
@@ -429,8 +429,8 @@
   <!-- MOBILE MENU DRAWER -->
   <div id="mobile-menu" style="display:none;background:rgba(14,14,22,0.97);border-bottom:1px solid var(--border);padding:16px 20px;flex-direction:column;gap:8px;position:sticky;top:56px;z-index:49;backdrop-filter:blur(24px);">
     <!-- Always visible -->
-    <button class="btn-secondary" id="mobile-library-btn" style="font-size:13px;padding:11px 16px;text-align:left;width:100%;">📚 Library</button>
-    <button class="btn-secondary" id="mobile-prefs-btn" style="font-size:13px;padding:11px 16px;text-align:left;width:100%;">⚙ Preferences</button>
+    <button class="btn-secondary" id="mobile-library-btn" style="display:none;" style="font-size:13px;padding:11px 16px;text-align:left;width:100%;">📚 Library</button>
+    <button class="btn-secondary" id="mobile-prefs-btn" style="display:none;" style="font-size:13px;padding:11px 16px;text-align:left;width:100%;">⚙ Preferences</button>
     <button class="btn-secondary" id="reset-btn-mobile" style="display:none;font-size:13px;padding:11px 16px;text-align:left;width:100%;">↩ New Session</button>
     <!-- Auth area -->
     <div id="mobile-auth-area" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
