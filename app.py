@@ -596,8 +596,10 @@ def chat():
             text = text[start:end]
         parsed = json.loads(text)
 
+        print(f"[CHECKPOINT] stage={parsed.get('stage')} question_count={question_count} mod2={question_count % 2}")
         if parsed.get("stage") != "final" and question_count > 0 and question_count % 2 == 1 and prompt_id:
             cp_id = f"{prompt_id}_cp_{question_count}"
+            print(f"[CHECKPOINT] Triggering checkpoint {cp_id}")
             threading.Thread(target=run_task_async, args=(cp_id, build_checkpoint, messages), daemon=True).start()
             parsed["checkpointId"] = cp_id
 
